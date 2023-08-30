@@ -16,11 +16,12 @@
     "ant-design-vue": "^3.2.20",
     "bindings": "^1.5.0",
     "core-js": "^3.8.3",
-    "envtools": "file:E:\\work\\git_repo\\env-tools\\build\\",
+    "envtools": "file:E:\\work\\git_repo\\env-tools\\",
     "node-addon-api": "^7.0.0",
     "node-gyp": "^9.3.1",
     "node-loader": "^2.0.0",
     "node-sass": "^9.0.0",
+    "sqlite3": "^5.1.6",
     "vue": "^3.2.13",
     "vue-uuid": "^3.0.0"
   },

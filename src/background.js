@@ -6,8 +6,7 @@ import { createProtocol } from 'vue-cli-plugin-electron-builder/lib'
 import path from "path";
 
 //此部分是自己的库
-//文件扫描库
-const scanTool = require('./electron/scan')
+import handler from "@/electron/handler";
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
 
@@ -30,7 +29,10 @@ async function createWindow() {
       nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION,
       contextIsolation: !process.env.ELECTRON_NODE_INTEGRATION
     }
-  })
+  });
+
+  handler.dataSetup();
+  handler.ipcSetup(ipcMain,win.webContents);
 
   if (process.env.WEBPACK_DEV_SERVER_URL) {
     // Load the url of the dev server if in development mode
@@ -71,13 +73,7 @@ app.on('ready', async () => {
   //   }
   // }
 
-  //注册扫描文件的信息监听事件
-  ipcMain.on('scan', (event, args) => {
-    console.log('3333333');
-    scanTool.scanFolder(args, win);
-  });
-
-  createWindow()
+  createWindow();
 })
 
 
