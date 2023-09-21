@@ -15,10 +15,10 @@
         <template #bodyCell="{ column , record}">
           <template v-if="column.key === 'operation'" >
             <span v-if="record.status == 'down'">
-              <a><play-circle-two-tone /></a>
+              <a-button type="link" @click="startup(record)"><play-circle-two-tone /></a-button>
             </span>
             <span v-else>
-              <a><pause-circle-two-tone /></a>
+              <a-button type="link" @click="shutdown(record)"><pause-circle-two-tone /></a-button>
             </span>
             <span style="padding-left: 10px">
               <a @click = "delData(record.key)"><delete-two-tone /></a>
@@ -28,6 +28,10 @@
             <span v-if="record.status == 'up'">
               <a-badge status="success"/>
               <a-tag color="success"><b>Up</b></a-tag>
+            </span>
+            <span v-else-if="record.status == 'fault'">
+              <a-badge status="warning"/>
+              <a-tag color="warning"><b>Fault</b></a-tag>
             </span>
             <span v-else>
               <a-badge status="error"/>
@@ -108,11 +112,11 @@ export default defineComponent({
 
       //数据库脚本执行成功事件
       window.electronAPI.onDBExecComplete(function (result) {
+
         if(result.ret == 0){
           let tempData = [];
           //循环查询结果
           for (let i = 0; i < result.data.length; i++) {
-
             //检查父行的数据是否已经构建
             let item = tempData[result.data[i].Sid];
             if(item){
@@ -147,7 +151,6 @@ export default defineComponent({
           for (let key in tempData) {
             data.value.push(tempData[key]);
           }
-
 
         }else {
           notification.error({
@@ -194,6 +197,58 @@ export default defineComponent({
 
     }
 
+    window.electronAPI.onEnvOptComplete(function (res) {
+
+      reflash();
+
+      if(res.retCode == 0){
+
+        notification.success({
+          message: '提醒',
+          description:'执行成功'
+        })
+      }else {
+        notification.error({
+          message: '提醒',
+          description:'执行失败，原因：' + res.data
+        })
+      }
+
+
+    });
+
+    const startup = (record) => {
+      let recordStr = JSON.stringify(record)
+
+      Modal.confirm({
+        title: '启用',
+        content: '确定启用吗？',
+        okText: '确定',
+        okType: 'primary',
+        cancelText: '取消',
+        onOk:() => {
+          window.electronAPI.envStartup(recordStr);
+        }
+      });
+
+
+    };
+
+    const shutdown = (record) => {
+      let recordStr = JSON.stringify(record);
+
+      Modal.confirm({
+        title: '禁用',
+        content: '确定禁用吗？',
+        okText: '确定',
+        okType: 'primary',
+        cancelText: '取消',
+        onOk:() => {
+          window.electronAPI.envShutdown(recordStr);
+        }
+      });
+    };
+
     //每次加载时刷新数据
     onMounted(() => {
       reflash();
@@ -204,7 +259,9 @@ export default defineComponent({
       innerColumns,
       data,
       reflash,
-      delData
+      delData,
+      startup,
+      shutdown
     };
   },
   name: "ControlPanel",

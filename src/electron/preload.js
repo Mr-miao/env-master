@@ -55,5 +55,31 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('scanComplete', () =>{
             callback(callback);
         });
-    }
+    },
+
+    minimizeWin: function (){
+        ipcRenderer.send('minimizeWin');
+    },
+
+    maximizeWin: function (){
+        ipcRenderer.send('maximizeWin');
+    },
+
+    closeWin: function (){
+        ipcRenderer.send('closeWin');
+    },
+
+    envStartup: function (record){
+        ipcRenderer.send('envStartup', record);
+    },
+
+    envShutdown: function (record){
+        ipcRenderer.send('envShutdown', record);
+    },
+
+    onEnvOptComplete: function (callback){
+        ipcRenderer.on('envOptComplete', (event, result) =>{
+            callback(result);
+        });
+    },
 })

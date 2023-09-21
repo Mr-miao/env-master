@@ -20,9 +20,10 @@ let win = null;
 async function createWindow() {
     // Create the browser window.
     win = new BrowserWindow({
-    width: 800,
-    height: 600,
-    webPreferences: {
+      width: 1024,
+      height: 768,
+      frame: false,
+      webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       // Use pluginOptions.nodeIntegration, leave this alone
       // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
@@ -31,8 +32,8 @@ async function createWindow() {
     }
   });
 
-  handler.dataSetup();
-  handler.ipcSetup(ipcMain,win.webContents);
+  handler.databaseSetup();
+  handler.ipcSetup(ipcMain,win);
 
   if (process.env.WEBPACK_DEV_SERVER_URL) {
     // Load the url of the dev server if in development mode
@@ -83,7 +84,8 @@ if (isDevelopment) {
   if (process.platform === 'win32') {
     process.on('message', (data) => {
       if (data === 'graceful-exit') {
-        app.quit()
+        handler.databaseClose();
+        app.quit();
       }
     })
   } else {
