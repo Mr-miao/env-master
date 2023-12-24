@@ -11,7 +11,7 @@
 
   <a-row>
     <a-col :span="24">
-      <a-table :columns="columns" :data-source="data">
+      <a-table :columns="columns" rowKey="id" :data-source="data" :scroll="{ y: 400 }">
         <template #bodyCell="{ column , record}">
           <template v-if="column.key === 'operation'" >
             <span v-if="record.status == 'down'">
@@ -20,46 +20,129 @@
             <span v-else>
               <a-button type="link" @click="shutdown(record)"><pause-circle-two-tone /></a-button>
             </span>
-            <span style="padding-left: 10px">
-              <a @click = "delData(record.key)"><delete-two-tone /></a>
+            <span>
+              <a-button type="link" @click = "delData(record.id)"><delete-two-tone /></a-button>
+            </span>
+            <span>
+              <a-button @click = "showStrategyScriptModal(record.id)" type="link"><CodeTwoTone /></a-button>
             </span>
           </template>
           <template v-if="column.key === 'status'">
             <span v-if="record.status == 'up'">
               <a-badge status="success"/>
-              <a-tag color="success"><b>Up</b></a-tag>
+              <a-tag color="success"><b>UP</b></a-tag>
             </span>
             <span v-else-if="record.status == 'fault'">
               <a-badge status="warning"/>
-              <a-tag color="warning"><b>Fault</b></a-tag>
+              <a-tag color="warning"><b>FAULT</b></a-tag>
             </span>
             <span v-else>
               <a-badge status="error"/>
-              <a-tag color="error"><b>Down</b></a-tag>
+              <a-tag color="error"><b>DOWN</b></a-tag>
             </span>
           </template>
         </template>
         <template #expandedRowRender = "{ record }">
-          <a-table :columns="innerColumns" :data-source="record.innerData" :pagination="false">
+          <a-table :columns="innerColumns" :data-source="record.strategyDetails" :pagination="false">
+            <template #bodyCell="{ column , record}">
+              <template v-if="column.key === 'stat'">
+                <span v-if="record.stat == 1">
+                  <a-badge status="success"/>
+                  <a-tag color="success"><b>NORMALLY</b></a-tag>
+                </span>
+                <span v-else>
+                  <a-tooltip placement="top">
+                    <template #title>
+                      <span>{{ record.statMsg }}</span>
+                    </template>
+                    <a-badge status="error"/>
+                    <a-tag color="error"><b>ABNORMAL</b></a-tag>
+                  </a-tooltip>
+                </span>
+              </template>
+            </template>
           </a-table>
+<!--          <a-row>-->
+<!--            <a-col :span="12">-->
+<!--              <script-editor-->
+<!--                  v-model:script="record.strategyScript.startup.script"-->
+<!--                  v-model:switched="record.strategyScript.startup.priorExec"-->
+<!--                  switchOnTip="在环境启用前执行"-->
+<!--                  switch-off-tip="在环境启用后执行"-->
+<!--                  :maxLines="3"-->
+<!--                  :minLines="3"-->
+<!--                  :readonly="true"-->
+<!--                  title="启用时脚本">-->
+<!--              </script-editor>-->
+<!--            </a-col>-->
+<!--            <a-col :span="12">-->
+<!--              <script-editor-->
+<!--                  v-model:script="record.strategyScript.shutdown.script"-->
+<!--                  v-model:switched="record.strategyScript.shutdown.priorExec"-->
+<!--                  switchOnTip="在环境关停前执行"-->
+<!--                  switch-off-tip="在环境关停后执行"-->
+<!--                  :maxLines="3"-->
+<!--                  :minLines="3"-->
+<!--                  :readonly="true"-->
+<!--                  title="关停时脚本">-->
+<!--              </script-editor>-->
+<!--            </a-col>-->
+<!--          </a-row>-->
         </template>
       </a-table>
     </a-col>
   </a-row>
+  <a-modal title="环境关联脚本设置" width="800" v-model:visible="isStrategyScriptModalVisible" @cancel="isStrategyScriptModalVisible = false">
+    <a-form
+        name="scriptModal"
+        :model="strategyScript"
+        autocomplete="off">
+      <a-row>
+        <a-col :span="11">
+            <script-editor
+                v-model:script="strategyScript.scriptWithStart"
+                v-model:switched="strategyScript.startScriptPriorExec"
+                switchOnTip="在环境启用前执行"
+                switch-off-tip="在环境启用后执行"
+                title="启用时脚本">
+            </script-editor>
+        </a-col>
+        <a-col :span="2"></a-col>
+        <a-col :span="11">
+          <script-editor
+              v-model:script="strategyScript.scriptWithShutdown"
+              v-model:switched="strategyScript.shutdownScriptPriorExec"
+              switchOnTip="在环境关停前执行"
+              switch-off-tip="在环境关停后执行"
+              title="关停时脚本">
+          </script-editor>
+        </a-col>
+      </a-row>
+
+    </a-form>
+    <template #footer>
+      <a-button @click="isStrategyScriptModalVisible = false">取消</a-button>
+      <a-button type="primary" @click="saveStrategyScript">确定</a-button>
+    </template>
+  </a-modal>
 </template>
 
 <script>
 
 import { defineComponent, ref, onMounted} from 'vue';
 import { notification, Modal } from 'ant-design-vue';
-import { PlayCircleTwoTone, DeleteTwoTone, PauseCircleTwoTone, SyncOutlined} from '@ant-design/icons-vue'
+import { PlayCircleTwoTone, DeleteTwoTone, PauseCircleTwoTone, SyncOutlined, CodeTwoTone} from '@ant-design/icons-vue'
 
-import until from "../comm/until"
+import ScriptEditor from "@/components/ScriptEditor";
+
+const enums = require('@/comm/enum');
+const { StrategyScript } = require('@/comm/vo');
+const handlerMsg = require('@/electron/handlers/enum');
 
 const columns = [{
   title: '策略名称',
-  dataIndex: 'name',
-  key: 'name',
+  dataIndex: 'startegiesName',
+  key: 'startegiesName',
 }, {
   title: '策略描述',
   dataIndex: 'description',
@@ -89,6 +172,10 @@ const innerColumns = [{
   title:'环境类型',
   dataIndex:'type',
   key:'type'
+},{
+  title:'状态',
+  dataIndex:'stat',
+  key:'stat'
 }];
 
 
@@ -97,61 +184,96 @@ export default defineComponent({
 
     const data = ref([]);
 
-    const reflash = ()=> {
-      data.value = [];
+    const scriptStrategyKey = ref('');
 
-      let sql = 'SELECT strategies.ID AS Sid, ' +
-          'strategies.StartegiesName, ' +
-          'strategies.State, ' +
-          'strategies.Description, ' +
-          'strategy_details.ID AS Did, ' +
-          'strategy_details.ExecutablePath, ' +
-          'strategy_details.EnvironmentType, ' +
-          'strategy_details.AssociatedEnvironment ' +
-          'FROM strategies LEFT JOIN strategy_details ON strategies.ID = strategy_details.StrategyID;';
+    const strategyScript = ref({
+      scriptWithStart:'',
+      startScriptPriorExec:false,
+      scriptWithShutdown:'',
+      shutdownScriptPriorExec:false
+    })
 
-      //数据库脚本执行成功事件
-      window.electronAPI.onDBExecComplete(function (result) {
+
+    //保存到现有策略模态窗口可见状态控制变量
+    const isStrategyScriptModalVisible = ref(false);
+
+    const showStrategyScriptModal = (strategyKey) =>{
+      isStrategyScriptModalVisible.value = true;
+
+      scriptStrategyKey.value = strategyKey;
+
+      strategyScript.value.scriptWithStart = '';
+      strategyScript.value.startScriptPriorExec = false;
+      strategyScript.value.scriptWithShutdown = '';
+      strategyScript.value.shutdownScriptPriorExec = false;
+
+      window.electronAPI.once(handlerMsg.MSG_EGT_SCRIPT_BY_STRATEGY,  (result) =>{
 
         if(result.ret == 0){
-          let tempData = [];
-          //循环查询结果
-          for (let i = 0; i < result.data.length; i++) {
-            //检查父行的数据是否已经构建
-            let item = tempData[result.data[i].Sid];
-            if(item){
-              item.innerData.push({
-                exec:until.getFileNameByPath(result.data[i].ExecutablePath),
-                path:result.data[i].ExecutablePath,
-                env:result.data[i].AssociatedEnvironment,
-                type:result.data[i].EnvironmentType,
-                key:result.data[i].Did
-              });
-            }else {
-              //如未构建父行数据，进行构建
-              item = {
-                key: result.data[i].Sid,
-                name: result.data[i].StartegiesName,
-                description:result.data[i].Description,
-                status:result.data[i].State,
-                innerData:[{
-                  exec:until.getFileNameByPath(result.data[i].ExecutablePath),
-                  path:result.data[i].ExecutablePath,
-                  env:result.data[i].AssociatedEnvironment,
-                  type:result.data[i].EnvironmentType,
-                  key:result.data[i].Did
-                }]
-              };
 
-              tempData[item.key] = item;
+          for (const script of result.data) {
+            if (script.type == enums.StrategyScriptType.WITH_STARTUP){
+              strategyScript.value.scriptWithStart = script.script;
+              strategyScript.value.startScriptPriorExec = script.priorExec;
+            }else {
+              strategyScript.value.scriptWithShutdown = script.script;
+              strategyScript.value.shutdownScriptPriorExec = script.priorExec;
             }
           }
+        }else {
+          notification.error({
+            message: '提醒',
+            description:'查询失败，原因：' + result.data
+          })
+        }
+      });
 
+      window.electronAPI.call(handlerMsg.MSG_EGT_SCRIPT_BY_STRATEGY, strategyKey);
+    }
 
-          for (let key in tempData) {
-            data.value.push(tempData[key]);
-          }
+    const saveStrategyScript = () =>{
+      let strategyScriptWithStart = new StrategyScript().getJson();
+      let strategyScriptWithShutdown = new StrategyScript().getJson();
 
+      strategyScriptWithStart.strategyKey = scriptStrategyKey.value;
+      strategyScriptWithStart.type = enums.StrategyScriptType.WITH_STARTUP;
+      strategyScriptWithStart.script = strategyScript.value.scriptWithStart;
+      strategyScriptWithStart.priorExec = strategyScript.value.startScriptPriorExec;
+
+      strategyScriptWithShutdown.strategyKey = scriptStrategyKey.value;
+      strategyScriptWithShutdown.type = enums.StrategyScriptType.WITH_SHUTDOWN;
+      strategyScriptWithShutdown.script = strategyScript.value.scriptWithShutdown;
+      strategyScriptWithShutdown.priorExec = strategyScript.value.shutdownScriptPriorExec;
+
+      window.electronAPI.once(handlerMsg.MSG_SVAE_SCRIPT,  (result) =>{
+
+        if(result.ret == 0){
+          notification.success({
+            message: '提醒',
+            description:'保存成功'
+          })
+        }else {
+          notification.error({
+            message: '提醒',
+            description:'保存失败，原因：' + result.data
+          })
+        }
+
+        isStrategyScriptModalVisible.value = false;
+      });
+
+      window.electronAPI.call(handlerMsg.MSG_SVAE_SCRIPT, [strategyScriptWithStart, strategyScriptWithShutdown]);
+    }
+
+    const reflash = ()=> {
+
+      //数据刷新成功
+      window.electronAPI.once(handlerMsg.MSG_GET_ALL_STRATEGY_BY_STAT, function (result) {
+        console.log(result)
+        if(result.ret == 0){
+          data.value = [];
+          data.value = result.data;
+          // console.log(result.data )
         }else {
           notification.error({
             message: '提醒',
@@ -160,7 +282,7 @@ export default defineComponent({
         }
       })
 
-      window.electronAPI.dbQuery(sql);
+      window.electronAPI.call(handlerMsg.MSG_GET_ALL_STRATEGY_BY_STAT);
     }
 
     const delData = function (id){
@@ -172,11 +294,8 @@ export default defineComponent({
         okType: 'danger',
         cancelText: '取消',
         onOk:() => {
-          let sqls = [];
-          sqls.push("DELETE FROM strategy_details WHERE StrategyID ='" + id + "'");
-          sqls.push("DELETE FROM strategies WHERE ID ='" + id + "'");
-
-          window.electronAPI.onDBExecComplete(function (result) {
+          window.electronAPI.once(handlerMsg.MSG_DEL_STRATEGY, (result) =>{
+            // console.log(result)
             if(result.ret == 0){
               reflash();
               notification.success({
@@ -191,34 +310,19 @@ export default defineComponent({
             }
           })
 
-          window.electronAPI.dbUpdate(sqls);
+          let delIds = [id];
+
+          window.electronAPI.call(handlerMsg.MSG_DEL_STRATEGY, delIds);
         }
       });
 
     }
 
-    window.electronAPI.onEnvOptComplete(function (res) {
-
-      reflash();
-
-      if(res.retCode == 0){
-
-        notification.success({
-          message: '提醒',
-          description:'执行成功'
-        })
-      }else {
-        notification.error({
-          message: '提醒',
-          description:'执行失败，原因：' + res.data
-        })
-      }
-
-
-    });
 
     const startup = (record) => {
       let recordStr = JSON.stringify(record)
+
+      console.log(recordStr)
 
       Modal.confirm({
         title: '启用',
@@ -227,7 +331,23 @@ export default defineComponent({
         okType: 'primary',
         cancelText: '取消',
         onOk:() => {
-          window.electronAPI.envStartup(recordStr);
+          window.electronAPI.once(handlerMsg.MSG_ENV_STARTUP, (res) =>{
+            reflash();
+            if(res.ret == 0){
+
+              notification.success({
+                message: '提醒',
+                description:'执行成功'
+              })
+            }else {
+              notification.error({
+                message: '提醒',
+                description:'执行失败，原因：' + res.data
+              })
+            }
+          })
+
+          window.electronAPI.call(handlerMsg.MSG_ENV_STARTUP, recordStr);
         }
       });
 
@@ -244,7 +364,23 @@ export default defineComponent({
         okType: 'primary',
         cancelText: '取消',
         onOk:() => {
-          window.electronAPI.envShutdown(recordStr);
+          window.electronAPI.once(handlerMsg.MSG_ENV_SHUTDOWN, (res) =>{
+            reflash();
+            if(res.ret == 0){
+
+              notification.success({
+                message: '提醒',
+                description:'执行成功'
+              })
+            }else {
+              notification.error({
+                message: '提醒',
+                description:'执行失败，原因：' + res.data
+              })
+            }
+          })
+
+          window.electronAPI.call(handlerMsg.MSG_ENV_SHUTDOWN, recordStr);
         }
       });
     };
@@ -261,7 +397,12 @@ export default defineComponent({
       reflash,
       delData,
       startup,
-      shutdown
+      shutdown,
+      strategyScript,
+      scriptStrategyKey,
+      isStrategyScriptModalVisible,
+      showStrategyScriptModal,
+      saveStrategyScript
     };
   },
   name: "ControlPanel",
@@ -269,7 +410,9 @@ export default defineComponent({
     PlayCircleTwoTone,
     DeleteTwoTone,
     PauseCircleTwoTone,
-    SyncOutlined
+    SyncOutlined,
+    CodeTwoTone,
+    ScriptEditor
   }
 })
 
@@ -278,4 +421,17 @@ export default defineComponent({
 
 <style scoped>
 
+/deep/ .ant-table-body::-webkit-scrollbar,
+.info::-webkit-scrollbar {
+  height: 3px;
+  width: 3px;
+  /*background-color: #3498db7e;*/
+}
+
+
+   /deep/ .ant-table-body::-webkit-scrollbar-thumb,
+   .info::-webkit-scrollbar-thumb {
+     border-radius: 3px;
+     /*background-color: #3498db;*/
+   }
 </style>

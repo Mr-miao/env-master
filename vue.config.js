@@ -3,6 +3,11 @@ const { defineConfig } = require('@vue/cli-service');
 
 module.exports = defineConfig({
   transpileDependencies: true,
+  // configureWebpack: {
+  //   externals: {
+  //     knex: "require('knex')",
+  //   }
+  // },
   // chainWebpack: config => {
   //   config.module
   //       .rule('node')
@@ -13,7 +18,7 @@ module.exports = defineConfig({
   // },
   pluginOptions: {
     electronBuilder: {
-      // externals: ['better-sqlite3','node-pre-gyp'],
+      externals: ['node-pre-gyp','knex','better-sqlite3'],
       // nodeIntegration: true,
       preload: "src/electron/preload.js",
       //下面这部分配置解决了【Electron Vue3关于错误：[DEP0128] DeprecationWarning Invalid 'main' field in】的问题

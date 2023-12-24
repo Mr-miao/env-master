@@ -1,15 +1,16 @@
 <template>
   <a-row>
-    <a-col :span="20">
-      <div id="tool-bar">
-        <a-badge color="#87d068" text="EnvMaster" />
-      </div>
-    </a-col>
     <a-col :span="4">
+      <a-badge color="#87d068" text="EnvMaster" />
+    </a-col>
+    <a-col :span="14">
+      <div id="tool-bar">&nbsp;</div>
+    </a-col>
+    <a-col :span="6">
       <div style="text-align: right;">
         <a-button type="link" @click="minimizeWin"><MinusOutlined /></a-button>
         <a-button type="link" @click="maximizeWin">
-          <template v-if = "winStat == true">
+          <template v-if = "isWinMaximize == false">
             <BorderOutlined/>
           </template>
           <template v-else>
@@ -51,26 +52,34 @@ import { SlidersOutlined, SearchOutlined, MinusOutlined, BorderOutlined, CloseOu
 import EnvScanner  from './components/EnvScanner.vue'
 import ControlPanel  from './components/ControlPanel.vue'
 
+const listenerEnums = require("@/electron/handlers/enum");
+
 
 export default defineComponent({
   setup(){
 
     let comName = ref('ControlPanel');
 
-    const winStat = ref(true);
+    //
+    const isWinMaximize = ref(false);
 
     const minimizeWin = ()=>{
-      window.electronAPI.minimizeWin(); // 窗口最小化
+      window.electronAPI.call(listenerEnums.MSG_MINIMIZE_WIN); // 窗口最小化
     };
 
     const maximizeWin = ()=>{
-      winStat.value = !winStat.value;
-      window.electronAPI.maximizeWin();
+      isWinMaximize.value = !isWinMaximize.value;
+      window.electronAPI.call(listenerEnums.MSG_MAXIMIZE_WIN);
     };
 
     const closeWin = ()=>{
-      window.electronAPI.closeWin();
+      window.electronAPI.call(listenerEnums.MSG_CLOSE_WIN);
     };
+
+    //接收双击标题栏带来的窗口变化事件
+    window.electronAPI.on(listenerEnums.MSG_WIN_STAT_CHANGE, (winStat) => {
+      isWinMaximize.value = winStat;
+    });
 
     const handleClick = e => {
       if(e.key === 'control'){
@@ -81,7 +90,7 @@ export default defineComponent({
     };
     return {
       comName,
-      winStat,
+      isWinMaximize,
       handleClick,
       minimizeWin,
       maximizeWin,

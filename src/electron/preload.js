@@ -1,85 +1,22 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
-// process.on('warning', e => console.warn(e.stack));
-
 
 contextBridge.exposeInMainWorld('electronAPI', {
-    /**
-     * 执行数据更新操作
-     * @param scanPath
-     */
-    dbUpdate: function (sql){
-        ipcRenderer.send('dbupdate', sql);
+
+    call: (msg, param)=>{
+        ipcRenderer.send(msg, param);
     },
-    /**
-     * 执行数据查询操作
-     * @param scanPath
-     */
-    dbQuery: function (sql){
-        // console.log("22222");
-        ipcRenderer.send('dbquery', sql);
-    },
-    /**
-     * 数据库执行完成后的事件
-     * @param callback
-     */
-    onDBExecComplete: function (callback){
-        ipcRenderer.once('onDBExecComplete', (event, result) =>{
-            // console.log("22222");
-            // console.log(result);
+
+    on: (msg, callback) =>{
+        ipcRenderer.on(msg, (event, result) =>{
             callback(result);
         });
     },
-    /**
-     * 执行指定目录下的可执行文件扫描
-     * @param scanPath
-     */
-    scan: function (scanPath){
-        // console.log("22222");
-        ipcRenderer.send('scan', scanPath);
-    },
-    /**
-     * 扫描中监听返回的事件
-     * @param callback
-     */
-    onScaning: function (callback){
-        ipcRenderer.on('scanResult', (event, resultJson) =>{
-            callback(resultJson);
-        });
-    },
-    /**
-     * 扫描完成事件监控
-     * @param callback
-     */
-   onScanComplete: function (callback){
-        ipcRenderer.on('scanComplete', () =>{
-            callback(callback);
-        });
-    },
 
-    minimizeWin: function (){
-        ipcRenderer.send('minimizeWin');
-    },
-
-    maximizeWin: function (){
-        ipcRenderer.send('maximizeWin');
-    },
-
-    closeWin: function (){
-        ipcRenderer.send('closeWin');
-    },
-
-    envStartup: function (record){
-        ipcRenderer.send('envStartup', record);
-    },
-
-    envShutdown: function (record){
-        ipcRenderer.send('envShutdown', record);
-    },
-
-    onEnvOptComplete: function (callback){
-        ipcRenderer.on('envOptComplete', (event, result) =>{
+    once: (msg, callback) =>{
+        ipcRenderer.once(msg, (event, result) =>{
             callback(result);
         });
-    },
+    }
+
 })

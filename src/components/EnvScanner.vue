@@ -42,8 +42,7 @@
       </a-form-item>
       <a-form-item
           label="策略描述"
-          name="strategyDescription"
-          :rules="[{ required: true, message: '请输入策略描述' }]">
+          name="strategyDescription">
         <a-textarea v-model:value="strategyInfo.strategyDescription" placeholder="请输入策略描述" />
       </a-form-item>
     </a-form>
@@ -87,8 +86,9 @@
 <script>
 import { defineComponent, ref } from 'vue';
 import { notification } from 'ant-design-vue';
-// import { uuid } from "vue-uuid";
-import until from "../comm/until"
+
+const { Strategy, StrategyDetails } = require('@/comm/vo');
+const handlerMsg = require('@/electron/handlers/enum');
 
 
 
@@ -148,11 +148,11 @@ export default defineComponent({
 
 
     //注册扫描完成后的事件处理回调函数
-    window.electronAPI.onScanComplete(() => {
+    window.electronAPI.on(handlerMsg.MSG_SCAN_COMPLETE, () => {
       loadingStat.value = false;
     })
     //注册扫描中监听返回的事件处理函数
-    window.electronAPI.onScaning((sanRes) => {
+    window.electronAPI.on(handlerMsg.MSG_SCAN_FINDED,(sanRes) => {
       // console.log(sanRes)
       for (let i = 0; i < sanRes.length; i++) {
         sanTableData.value.push(sanRes[i]);
@@ -169,7 +169,7 @@ export default defineComponent({
         sanTableData.value.length = 0;
 
         loadingStat.value = true;
-        window.electronAPI.scan(value);
+        window.electronAPI.call(handlerMsg.MSG_SCAN, value);
       }
 
     }
@@ -192,12 +192,11 @@ export default defineComponent({
       if(type == 'new'){
         isStrategyModalVisible.value = true;
       }else {
-        let querySql = 'SELECT * FROM strategies;';
 
         //数据库脚本执行成功事件
-        window.electronAPI.onDBExecComplete(function (result) {
+        window.electronAPI.once(handlerMsg.MSG_GET_STRATEGY, function (result) {
           if(result.ret == 0){
-
+            console.log(result)
             //将查询结果转存到下拉选择器中
             for (let i = 0; i < result.data.length; i++) {
               let item = {
@@ -215,7 +214,7 @@ export default defineComponent({
           }
         })
 
-        window.electronAPI.dbQuery(querySql);
+        window.electronAPI.call(handlerMsg.MSG_GET_STRATEGY);
 
         isSavetoModalVisible.value = true;
       }
@@ -234,36 +233,28 @@ export default defineComponent({
     const handleNew = () =>{
       newFormRef.value.validateFields().then(values => {
 
-        let insertSql = new Array();
-        let strategieKey = until.getUUID();
-
-        insertSql.push('INSERT INTO strategies(ID, StartegiesName, Description, State) VALUES("'
-            + strategieKey + '","'
-            + values.strategyName + '","'
-            + values.strategyDescription + '","'
-            + 'down"' +
-            ')'
-        );
+        let strategy = new Strategy().getJson();
+        strategy.startegiesName = values.strategyName;
+        strategy.description = values.strategyDescription;
 
         // console.log(tableSelectedRows)
 
         for (let i = 0; i < tableSelectedRows.length; i++) {
           let row = tableSelectedRows[i];
 
-          insertSql.push('INSERT INTO strategy_details(ID, StrategyID, AssociatedEnvironment, EnvironmentType, ExecutablePath, EnvironmentExecDetial) VALUES("'
-              + until.getUUID() + '","'
-              + strategieKey + '","'
-              + row.env + '","'
-              + row.type + '","'
-              + row.path + '","'
-              + row.comment +
-              '")'
-          );
+          let strategyDetail = new StrategyDetails().getJson();
+
+          strategyDetail.associatedEnvironment = row.env;
+          strategyDetail.environmentType = row.type;
+          strategyDetail.executablePath = row.path;
+          strategyDetail.environmentDetial = row.comment;
+
+          strategy.strategyDetails.push(strategyDetail);
         }
-        // console.log(insertSql);
+        // console.log(strategy);
 
         //数据库脚本执行成功事件
-        window.electronAPI.onDBExecComplete(function (result) {
+        window.electronAPI.once(handlerMsg.MSG_SAVE_STRATEGY,function (result) {
           if(result.ret == 0){
             notification.success({
               message: '提醒',
@@ -279,8 +270,7 @@ export default defineComponent({
           }
         });
 
-        window.electronAPI.dbUpdate(insertSql);
-
+        window.electronAPI.call(handlerMsg.MSG_SAVE_STRATEGY, strategy)
 
 
       }).catch(info => {
@@ -293,24 +283,23 @@ export default defineComponent({
     const handleSaveto = () =>{
       savetoFormRef.value.validateFields().then(values => {
 
-        let insertSql = new Array();
+        let strategy = new Strategy().getJson();
+        strategy.id = values.strategyKey;
 
         for (let i = 0; i < tableSelectedRows.length; i++) {
           let row = tableSelectedRows[i];
 
-          insertSql.push('INSERT INTO strategy_details(ID, StrategyID, AssociatedEnvironment, EnvironmentType, ExecutablePath, EnvironmentExecDetial) VALUES("'
-              + until.getUUID() + '","'
-              + values.strategyKey + '","'
-              + row.env + '","'
-              + row.type + '","'
-              + row.path + '","'
-              + row.comment +
-              '")'
-          );
+          let strategyDetail = new StrategyDetails().getJson();
+
+          strategyDetail.associatedEnvironment = row.env;
+          strategyDetail.environmentType = row.type;
+          strategyDetail.executablePath = row.path;
+          strategyDetail.environmentDetial = row.comment;
+
+          strategy.strategyDetails.push(strategyDetail);
         }
 
-        //数据库脚本执行成功事件
-        window.electronAPI.onDBExecComplete(function (result) {
+        window.electronAPI.once(handlerMsg.MSG_SAVE_STRATEGY,function (result) {
           if(result.ret == 0){
             notification.success({
               message: '提醒',
@@ -326,9 +315,7 @@ export default defineComponent({
           }
         });
 
-        window.electronAPI.dbUpdate(insertSql);
-
-
+        window.electronAPI.call(handlerMsg.MSG_SAVE_STRATEGY, strategy);
 
       }).catch(info => {
         console.log('Validate Failed:', info);

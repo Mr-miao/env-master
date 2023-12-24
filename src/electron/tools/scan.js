@@ -9,10 +9,11 @@ process.noAsar = true;
 /**
  * 文件夹遍历扫描方法
  * @param folderPath 待扫描文件夹路径
- * @param webContents 接收扫描结果的渲染进程
- * @returns {Promise<*[]>}
+ * @param onScanning 扫描到内容时事件
+ * @param onScanComplete 扫描完成事件
+ * @returns {Promise<void>}
  */
-async function scanFolder(folderPath, webContents) {
+async function scanFolder(folderPath, onScanning, onScanComplete) {
     //扫描所得的文件数组
     let files;
     //从单个文件上获取到的文件路径
@@ -32,7 +33,7 @@ async function scanFolder(folderPath, webContents) {
                 // 判断文件扩展名是否为 .exe 或 .bat
                 const ext = path.extname(filePath);
 
-                if (ext === '.exe' || ext === '.bat') {
+                if (ext === '.exe' || ext === '.bat' || ext === '.service') {
                     // 查找服务
                     let serviceInfo = envtools.getServiceInfo(filePath);
                     // 查找查找启动项
@@ -40,13 +41,10 @@ async function scanFolder(folderPath, webContents) {
                     // 查找查找计划任务
                     let taskInfo = envtools.getTaskInfo(filePath);
 
-                    // serviceInfo = JSON.parse(serviceInfo);
-                    // startupInfo = JSON.parse(startupInfo);
                     let findedArr = [];
 
                     // 拼接服务返回结果
                     if (serviceInfo.retCode == 0){
-                        console.log(filePath);
                         for (let i = 0; i < serviceInfo.data.length; i++ ){
                             findedArr.push({
                                 'key':until.getUUID(),
@@ -96,11 +94,10 @@ async function scanFolder(folderPath, webContents) {
                         console.error('Error while scanning folder:', taskInfo.data);
                     }
 
-
                     //如果找到对应可执行程序的service、计划任务、自启动项才往页面发消息
                     if(findedArr.length > 0){
-                        //将扫描结果送给页面
-                        webContents.send('scanResult', findedArr);
+                        //将扫描结果进行回调回传
+                        onScanning(findedArr);
                     }
 
                     // console.log(serviceInfo);
@@ -117,8 +114,8 @@ async function scanFolder(folderPath, webContents) {
         }
     }
 
-    //通知页面扫描已经完成
-    webContents.send('scanComplete');
+    //执行扫描已经完成事件
+    onScanComplete();
 
 }
 

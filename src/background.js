@@ -6,7 +6,8 @@ import { createProtocol } from 'vue-cli-plugin-electron-builder/lib'
 import path from "path";
 
 //此部分是自己的库
-import handler from "@/electron/handler";
+const handler = require("@/electron/handlers/listener");
+const listenerEnums = require("@/electron/handlers/enum");
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
 
@@ -30,6 +31,14 @@ async function createWindow() {
       nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION,
       contextIsolation: !process.env.ELECTRON_NODE_INTEGRATION
     }
+  });
+
+  win.on('maximize', () => {
+    win.webContents.send(listenerEnums.MSG_WIN_STAT_CHANGE, true)
+  });
+
+  win.on('unmaximize', () => {
+    win.webContents.send(listenerEnums.MSG_WIN_STAT_CHANGE, false)
   });
 
   handler.databaseSetup();
@@ -90,6 +99,7 @@ if (isDevelopment) {
     })
   } else {
     process.on('SIGTERM', () => {
+      handler.databaseClose();
       app.quit()
     })
   }
