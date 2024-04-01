@@ -41,7 +41,8 @@ const getAllStrategyByStat = (callback) =>{
             'strategy_details.EnvironmentType',
             'strategy_details.AssociatedEnvironment')
         .from('strategies')
-        .leftJoin('strategy_details', 'strategies.ID', 'strategy_details.StrategyID').then((res) => {
+        .leftJoin('strategy_details', 'strategies.ID', 'strategy_details.StrategyID')
+        .orderBy('strategy_details.index', 'asc').then((res) => {
 
             let data = new Array();
 
@@ -73,7 +74,6 @@ const getAllStrategyByStat = (callback) =>{
 
                 innerItem.stat = stat.ret;
                 innerItem.statMsg = stat.data;
-
                 //检查父行数据是否已经构建
                 if (item) {
 
@@ -100,22 +100,30 @@ const getAllStrategyByStat = (callback) =>{
 
             }
 
-
             for (let key in tempData) {
-                //进行状态判断
-                if(tempData[key].upStatNum == tempData[key].strategyDetails.length){
-                    tempData[key].status = 'up'
-                }else if(tempData[key].upStatNum == 0){
-                    tempData[key].status = 'down'
-                }else {
-                    tempData[key].status = 'fault'
+                // 进行状态判断
+                if (tempData[key].upStatNum === tempData[key].strategyDetails.length) {
+                    tempData[key].status = 'up';
+                } else if (tempData[key].upStatNum === 0) {
+                    tempData[key].status = 'down';
+                } else {
+                    tempData[key].status = 'fault';
                 }
-                data.push(tempData[key]);
             }
 
+            // 对 tempData 按 startegiesName 进行降序排序（支持中文）
+            const sortedTempData = Object.values(tempData).sort((a, b) => {
+                // 使用 Intl.Collator 对象处理字符串比较以支持中文
+                const collator = new Intl.Collator('zh-Hans-CN', { sensitivity: 'base' });
+                return collator.compare(b.startegiesName, a.startegiesName);
+            });
+
+            // 将排序后的数据推送到 data 数组
+            sortedTempData.forEach(item => data.push(item));
+
             ret.data = data;
-            // console.log(ret.data[1].strategyScript)
             callback(ret);
+
         }).catch((error) => {
             let res ={'ret':-1, 'data':error};
             callback(res);
@@ -127,9 +135,8 @@ const deleteStrategy = (strategyIds, callback)=>{
 
     if(strategyIds){
         dbTool.getKnex().transaction((trx) => {
-            return  trx('strategies').whereIn('ID' , strategyIds).del().then(() => {
-                return  trx('strategy_details').whereIn('StrategyID' , strategyIds).del()
-            })
+            //数据库使用了级联删除，所以只删除主表数据即可
+            return  trx('strategies').whereIn('ID' , strategyIds).del();
         }).then(()=>{
             let res ={'ret':0, 'data':''};
             callback(res);
@@ -147,13 +154,12 @@ const saveStrategy = (strategy, callback) =>{
         let strategieKey = until.getUUID();
 
         dbTool.getKnex().transaction((trx) => {
-            return trx.insert({ID: strategieKey, StartegiesName:strategy.startegiesName, Description: strategy.description})
-                .into('strategies')
+            return trx.insert({ID: strategieKey, StartegiesName:strategy.startegiesName, Description: strategy.description}).into('strategies')
                 .then(() => {
                     let strategyDetailsArr = new Array();
                     for (let i = 0; i < strategy.strategyDetails.length; i++) {
                         let row = strategy.strategyDetails[i];
-                        strategyDetailsArr.push({ID: until.getUUID(), StrategyID:strategieKey, AssociatedEnvironment:row.associatedEnvironment, EnvironmentType:row.environmentType, ExecutablePath:row.executablePath, EnvironmentExecDetial:row.environmentDetial});
+                        strategyDetailsArr.push({ID: until.getUUID(), Index:i + 1, StrategyID:strategieKey, AssociatedEnvironment:row.associatedEnvironment, EnvironmentType:row.environmentType, ExecutablePath:row.executablePath, EnvironmentExecDetial:row.environmentDetial});
                     }
                     return trx.insert(strategyDetailsArr).into('strategy_details');
                 })
@@ -176,20 +182,25 @@ const saveStrategy = (strategy, callback) =>{
         dbTool.getKnex().transaction((trx) => {
             return trx('strategies')
                 .where('ID', finded.ID)
-                .update({'StartegiesName':startegiesName,'Description':description})
-                .then(()=>{
-                    let strategyDetailsArr = new Array();
-                    for (let i = 0; i < strategy.strategyDetails.length; i++) {
-                        let row = strategy.strategyDetails[i];
-                        strategyDetailsArr.push({'ID':until.getUUID(), 'StrategyID':strategy.id, 'AssociatedEnvironment':row.associatedEnvironment, 'EnvironmentType':row.environmentType, 'ExecutablePath':row.executablePath, 'EnvironmentExecDetial':row.environmentDetial});
-                    }
-                    return trx.insert(strategyDetailsArr).into('strategy_details');
+                .update({'StartegiesName':startegiesName,'Description':description}).then(()=>{
+                    return trx('strategy_details').max('Index as max_index')
+                        .then(maxIndexResult => {
+                            // maxIndexResult是一个对象，通常键是列名，值是计算出的最大值
+                            const maxIndex = maxIndexResult[0].max_index;
+                            console.log(strategy.strategyDetails)
+                            let strategyDetailsArr = new Array();
+                            for (let i = 1; i <= strategy.strategyDetails.length; i++) {
+                                let row = strategy.strategyDetails[i - 1];
+                                strategyDetailsArr.push({'ID':until.getUUID(), 'Index':maxIndex + i, 'StrategyID':strategy.id, 'AssociatedEnvironment':row.associatedEnvironment, 'EnvironmentType':row.environmentType, 'ExecutablePath':row.executablePath, 'EnvironmentExecDetial':row.environmentDetial});
+                            }
+
+                            return trx.insert(strategyDetailsArr).into('strategy_details');
+                        });
                 })
         }).then(function(updates) {
             let res ={'ret':0, 'data':updates};
             callback(res);
         }).catch(function(error) {
-            console.log(error)
             let res ={'ret':-1, 'data':error};
             callback(res);
         });
@@ -210,12 +221,101 @@ const saveStrategy = (strategy, callback) =>{
             callback(res);
         })
     }
-
 }
+
+/**
+ * 移动策略明细执行序列
+ * @param strategyDetailId 策略明细ID
+ * @param moveType 移动方式
+ * @param callback
+ */
+const moveStrategyDetailIndex = async (strategyDetailId, moveType, callback) => {
+    try {
+        const knex = dbTool.getKnex();
+        const currentIndex = await knex.select('Index').from('strategy_details').where('ID', strategyDetailId);
+        const maxIndex = await knex('strategy_details').max('Index as max_index');
+
+        if (moveType === 'down' && currentIndex[0].Index >= maxIndex[0].max_index) {
+            const errorResponse = {
+                ret: -1,
+                data: '当前序列已为最大序列，无法下移'
+            };
+            callback(errorResponse);
+            return;
+        }
+
+        if (moveType === 'up' && currentIndex[0].Index === 1) {
+            const errorResponse = {
+                ret: -1,
+                data: '当前序列已为第一序列，无法上移'
+            };
+            callback(errorResponse);
+            return;
+        }
+
+        let replaceIndex = currentIndex[0].Index;
+        if (moveType === 'up') {
+            replaceIndex -= 1;
+        } else if (moveType === 'down') {
+            replaceIndex += 1;
+        }
+
+        await knex.transaction(trx => {
+            return trx('strategy_details')
+                .where('Index', replaceIndex)
+                .update({ Index: currentIndex[0].Index })
+                .then(() => {
+                    return trx('strategy_details').where('ID', strategyDetailId).update({ Index: replaceIndex });
+                });
+        });
+
+        const successResponse = {
+            ret: 0,
+            data: '索引移动成功'
+        };
+
+        callback(successResponse);
+
+    } catch (error) {
+        const errorResponse = {
+            ret: -1,
+            data: error.message || error
+        };
+        callback(errorResponse);
+    }
+};
+
+
+
+
+
+/**
+ * 删除策略明细
+ * @param strategyDetailId
+ * @param callback
+ */
+const deleteStrategyDetail = (strategyDetailId, callback)=>{
+
+    if(strategyDetailId){
+        dbTool.getKnex().transaction((trx) => {
+            return  trx('strategy_details').whereIn('ID' , strategyDetailId).del();
+        }).then(()=>{
+            let res ={'ret':0, 'data':''};
+            callback(res);
+        }).catch((err) => {
+            let res ={'ret':-1, 'data':err};
+            callback(res);
+        });
+
+    }
+}
+
 
 module.exports = {
     saveStrategy,
     getStrategy,
     deleteStrategy,
-    getAllStrategyByStat
+    getAllStrategyByStat,
+    deleteStrategyDetail,
+    moveStrategyDetailIndex
 };

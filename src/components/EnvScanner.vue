@@ -169,7 +169,7 @@ export default defineComponent({
         sanTableData.value.length = 0;
 
         loadingStat.value = true;
-        window.electronAPI.call(handlerMsg.MSG_SCAN, value);
+        window.electronAPI.call(handlerMsg.MSG_SCAN_PATH, value);
       }
 
     }
@@ -196,7 +196,6 @@ export default defineComponent({
         //数据库脚本执行成功事件
         window.electronAPI.once(handlerMsg.MSG_GET_STRATEGY, function (result) {
           if(result.ret == 0){
-            console.log(result)
             //将查询结果转存到下拉选择器中
             for (let i = 0; i < result.data.length; i++) {
               let item = {

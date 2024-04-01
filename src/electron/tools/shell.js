@@ -1,18 +1,25 @@
 const spawn = require('cross-spawn');
 
 
-const exec = (script, callback) => {
+const exec = async (script) => {
     // 使用 cross-spawn
     console.log('待执行脚本：'+script)
-    let child = spawn('cmd', ['/c', script], { stdio: 'pipe',env: { NODE_ENV: 'utf-8' } });
+
+    let ret = {
+        retCode:0,
+        data:''
+    }
+
+    if(script == undefined || script == ''){
+        return ret;
+    }
+
+    let child = spawn('cmd', ['/c', script], { encoding: 'utf8' });
 
     let scriptOutput = ''; // 用于存储脚本输出
     let scriptExecErr = ''; // 用于存储脚本执行时的错误
 
-    let ret = {
-        ret:0,
-        data:''
-    }
+
 
     child.stdout.on('data', (data) => {
         scriptOutput += data.toString();
@@ -24,21 +31,26 @@ const exec = (script, callback) => {
         scriptExecErr += data.toString();
     });
 
-    child.on('close', (code) => {
-        ret.ret = code;
 
+    const closeResult = await new Promise((resolve) => {
+        child.on('close', (code) => {
+            if (code !== 0) {
+                console.error('执行出错');
+                ret.retCode = -1;
+                ret.data = scriptExecErr;
+            } else {
+                console.log('执行成功');
+                console.log('脚本输出:\n', scriptOutput);
+                ret.retCode = 0;
+                ret.data = scriptOutput;
+            }
 
-        if (code !== 0) {
-            console.error('执行出错');
-            ret.data = scriptExecErr;
-        } else {
-            console.log('执行成功');
-            console.log('脚本输出:\n', scriptOutput); // 输出脚本的控制台输出
-            ret.data = scriptOutput;
-        }
-
-        callback(ret);
+            resolve();
+        });
     });
+
+    await closeResult;
+    return ret;
 }
 
 module.exports = {

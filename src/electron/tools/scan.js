@@ -43,6 +43,19 @@ async function scanFolder(folderPath, onScanning, onScanComplete) {
 
                     let findedArr = [];
 
+                    //todo 后续要做成根据设置项来打开下面查找exe的操作，
+
+                    // if(serviceInfo.retCode == -2 && startupInfo.retCode == -2 && startupInfo.retCode == -2){
+                    //     findedArr.push({
+                    //         'key':until.getUUID(),
+                    //         'exec':path.basename(filePath),
+                    //         'path':filePath,
+                    //         'env':path.basename(filePath),
+                    //         'comment':'',
+                    //         'type':'exec'
+                    //     });
+                    // }
+
                     // 拼接服务返回结果
                     if (serviceInfo.retCode == 0){
                         for (let i = 0; i < serviceInfo.data.length; i++ ){
@@ -119,6 +132,97 @@ async function scanFolder(folderPath, onScanning, onScanComplete) {
 
 }
 
+/**
+ * 根据指定的可执行文件搜搜其相关环境
+ * @param filePath
+ * @returns {{ret: number, data: *[]}|{ret: number, data: string}}
+ */
+function scanFile(filePath) {
+
+    let findedArr = [];
+
+    if (filePath != undefined) {
+
+        // 判断文件扩展名是否为 .exe 或 .bat
+        const ext = path.extname(filePath);
+
+        if (ext === '.exe' || ext === '.bat' || ext === '.service') {
+            // 查找服务
+            let serviceInfo = envtools.getServiceInfo(filePath);
+            // 查找查找启动项
+            let startupInfo = envtools.getStartupInfo(filePath);
+            // 查找查找计划任务
+            let taskInfo = envtools.getTaskInfo(filePath);
+
+            findedArr.push({
+                'key':until.getUUID(),
+                'exec':path.basename(filePath),
+                'path':filePath,
+                'env':path.basename(filePath),
+                'comment':'',
+                'type':'exec'
+            });
+
+            // 拼接服务返回结果
+            if (serviceInfo.retCode == 0){
+                for (let i = 0; i < serviceInfo.data.length; i++ ){
+                    findedArr.push({
+                        'key':until.getUUID(),
+                        'exec':path.basename(filePath),
+                        'path':filePath,
+                        'env':serviceInfo.data[i].name,
+                        'comment':serviceInfo.data[i].dispalyName,
+                        'type':'service'
+                    });
+                }
+
+            }else if(startupInfo.retCode != -2){
+                console.error('Error while scanning file:', serviceInfo.data);
+            }
+
+            // 拼接启动项返回结果
+            if(startupInfo.retCode == 0){
+
+                for (let i = 0; i < startupInfo.data.length; i++ ){
+                    findedArr.push({
+                        'key':until.getUUID(),
+                        'exec':path.basename(filePath),
+                        'path':filePath,
+                        "env":startupInfo.data[i].name,
+                        "comment":startupInfo.data[i].path,
+                        "type":"startup"
+                    });
+                }
+            }else if(startupInfo.retCode != -2){
+                console.error('Error while scanning file:', startupInfo.data);
+            }
+
+            // 拼接计划任务返回结果
+            if(taskInfo.retCode == 0){
+
+                for (let i = 0; i < taskInfo.data.length; i++ ){
+                    findedArr.push({
+                        'key':until.getUUID(),
+                        'exec':path.basename(filePath),
+                        'path':filePath,
+                        "env":taskInfo.data[i].name,
+                        "comment":taskInfo.data[i].details,
+                        "type":"task"
+                    });
+                }
+            }else if(startupInfo.retCode != -2){
+                console.error('Error while scanning file:', taskInfo.data);
+            }
+
+            return {'ret': 0, 'data':findedArr};
+        }else {
+            return {'ret':-1, 'data':'不是可执行程序'};
+        }
+    }
+
+}
+
 module.exports = {
     scanFolder,
+    scanFile
 };

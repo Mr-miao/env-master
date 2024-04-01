@@ -32,12 +32,13 @@ function databaseSetup(){
 
             knex.schema.createTable('strategy_details', function (table) {
                 table.string('ID').primary();
+                table.integer('Index', 2)
                 table.string('StrategyID');
                 table.string('AssociatedEnvironment');
                 table.string('EnvironmentType');
                 table.string('ExecutablePath');
                 table.string('EnvironmentExecDetial');
-                table.foreign('StrategyID').references('strategies.ID')
+                table.foreign('StrategyID').references('strategies.ID').onDelete('cascade');
             }).then(() =>{
                 console.log('create strategy_details success');
             }).catch((err) =>{
@@ -50,11 +51,11 @@ function databaseSetup(){
         if(!exists){
             knex.schema.createTable('strategy_script', function (table) {
                 table.string('ID').primary();
-                table.string('StrategyID');
+                table.string('StrategyDetailsID');
                 table.string('Type');
                 table.string('PriorExec');
                 table.string('Script');
-                table.foreign('StrategyID').references('strategies.ID')
+                table.foreign('StrategyDetailsID').references('strategy_details.ID').onDelete('cascade');
             }).then(() =>{
                 console.log('create strategy_script success');
             }).catch((err) =>{

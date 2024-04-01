@@ -1,90 +1,167 @@
-const ctrl = require("@/electron/tools/ctrl");
 const shell = require("@/electron/tools/shell")
+const envtools = require('envtools');
 const scriptHandler = require("@/electron/handlers/db/scriptHandler");
 const enums = require("@/comm/enum");
 
-const startup = (env, callback)=>{
+const startup = async (env)=>{
     let record = JSON.parse(env);
+    // console.log(record)
 
-    scriptHandler.getScriptByStrategyID(record.id, (res)=>{
+    let items = record.strategyDetails;
+    let actionRet;
+    let startupScript;
+    let execRet;
+    let result = {
+        ret : 0,
+        data : ''
+    };
+
+    for (let i = 0; i < items.length; i++) {
+        let res = await scriptHandler.getScriptByStrategyDetailsIDAsync(items[i].key)
         if (res.ret == 0){
-            // console.log(res)
             for (const script of res.data) {
+
                 if(script.type == enums.StrategyScriptType.WITH_STARTUP){
-                    record.strategyScript.startup = script;
-                }else {
-                    record.strategyScript.shutdown = script;
+                    startupScript = script.script;
                 }
             }
 
-            if(record.strategyScript.startup.priorExec){
-                shell.exec(record.strategyScript.startup.script, (res) =>{
-                    if(res.ret == 0){
-                        ctrl.startup(record, (res) => {
-                            callback(res);
-                        });
-                    }else {
-                        callback(res);
-                    }
-                })
-            }else {
-                ctrl.startup(record, (res) => {
-                    // console.log(res)
-                    if(res.ret == 0){
-                        shell.exec(record.strategyScript.startup.script, (res) =>{
-                            callback(res);
-                        });
-                    }else {
-                        callback(res);
-                    }
-                });
+            if(startupScript.priorExec){
+                execRet = await shell.exec(startupScript);
+                if(execRet.retCode != 0){
+                    result.ret = -1;
+                    result.data += items[i].env + '执行启动脚本未成功，因为：' + execRet.data + '\n';
+                    return result;
+                }
             }
+
+            switch (items[i].type) {
+                case 'service' :
+                    actionRet = envtools.startService(items[i].env);
+                    if(actionRet.retCode != 0){
+                        result.ret = -1;
+                        result.data += items[i].env + '操作未成功，因为：' + actionRet.data + '\n'
+                    }
+                    break;
+                case 'task' :
+                    actionRet = envtools.enableTaskInfo(items[i].env, false);
+                    if(actionRet.retCode != 0){
+                        result.ret = -1;
+                        result.data += items[i].env + '操作未成功，因为：' + actionRet.data + '\n'
+                    }
+                    break;
+                case 'startup' :
+                    actionRet = envtools.setStartup(items[i].env, items[i].path, false);
+                    if(actionRet.retCode != 0){
+                        result.ret = -1;
+                        result.data += items[i].env + '操作未成功，因为：' + actionRet.data + '\n'
+                    }
+                    break;
+                case 'exec' :
+                    actionRet = envtools.startExec(items[i].path);
+                    if(actionRet.retCode != 0){
+                        result.ret = -1;
+                        result.data += items[i].env + '操作未成功，因为：' + actionRet.data + '\n'
+                    }
+                    break;
+            }
+
+            if(!startupScript.priorExec){
+                execRet = await shell.exec(startupScript);
+                if(execRet.retCode != 0){
+                    result.ret = -1;
+                    result.data += items[i].env + '执行启动脚本未成功，因为：' + execRet.data + '\n';
+                    return result;
+                }
+            }
+
+            return result;
         }else {
-            callback(res);
+            return res;
         }
-    });
+
+    }
+
 
 }
 
-const shutdown = (env, callback) => {
+const shutdown = async (env)=>{
     let record = JSON.parse(env);
+    // console.log(record)
 
-    scriptHandler.getScriptByStrategyID(record.id, (res)=> {
-        if (res.ret == 0) {
-            // console.log(res)
+    let items = record.strategyDetails;
+    let actionRet;
+    let shutdownScript;
+    let execRet
+    let result = {
+        ret : 0,
+        data : ''
+    };
+
+    for (let i = 0; i < items.length; i++) {
+        let res = await scriptHandler.getScriptByStrategyDetailsIDAsync(items[i].key);
+
+        if (res.ret == 0){
             for (const script of res.data) {
-                if (script.type == enums.StrategyScriptType.WITH_STARTUP) {
-                    record.strategyScript.startup = script;
-                } else {
-                    record.strategyScript.shutdown = script;
+                if(script.type == enums.StrategyScriptType.WITH_SHUTDOWN){
+                    shutdownScript = script.script;
                 }
             }
 
-            if(record.strategyScript.shutdown.priorExec){
-                shell.exec(record.strategyScript.shutdown.script, (res) =>{
-                    if(res.ret == 0){
-                        ctrl.shutdown(record, (res) => {
-                            callback(res);
-                        });
-                    }else {
-                        callback(res);
-                    }
-                })
-            }else {
-                ctrl.shutdown(record, (res) => {
-                    if(res.ret == 0){
-                        shell.exec(record.strategyScript.shutdown.script, (res) =>{
-                            callback(res);
-                        });
-                    }else {
-                        callback(res);
-                    }
-                });
+            if(shutdownScript.priorExec){
+                execRet = await shell.exec(shutdownScript);
+                if(execRet.retCode != 0){
+                    result.ret = -1;
+                    result.data += items[i].env + '操作未成功，因为：' + execRet.data + '\n';
+                    return result;
+                }
             }
+
+            switch (items[i].type) {
+                case 'service' :
+                    actionRet = envtools.stopService(items[i].env);
+                    if(actionRet.retCode != 0){
+                        result.ret = -1;
+                        result.data += items[i].env + '操作未成功，因为：' + actionRet.data + '</br>'
+                    }
+                    break;
+                case 'task' :
+                    actionRet = envtools.enableTaskInfo(items[i].env, true);
+                    if(actionRet.retCode != 0){
+                        result.ret = -1;
+                        result.data += items[i].env + '操作未成功，因为：' + actionRet.data + '</br>'
+                    }
+                    break;
+                case 'startup' :
+                    actionRet = envtools.setStartup(items[i].env, items[i].path, true);
+                    if(actionRet.retCode != 0){
+                        result.ret = -1;
+                        result.data += items[i].env + '操作未成功，因为：' + actionRet.data + '</br>'
+                    }
+                    break;
+                case 'exec' :
+                    actionRet = envtools.closeExec(items[i].env);
+                    if(actionRet.retCode != 0){
+                        result.ret = -1;
+                        result.data += items[i].env + '操作未成功，因为：' + actionRet.data + '</br>'
+                    }
+                    break;
+            }
+
+            if(!shutdownScript.priorExec){
+                execRet = await shell.exec(shutdownScript);
+                if(execRet.retCode != 0){
+                    result.ret = -1;
+                    result.data += items[i].env + '操作未成功，因为：' + execRet.data + '\n';
+                    return result;
+                }
+            }
+
+            return result;
         }else {
-            callback(res);
+            return res;
         }
-    });
+    }
 
 
 }

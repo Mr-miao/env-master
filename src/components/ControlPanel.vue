@@ -21,10 +21,10 @@
               <a-button type="link" @click="shutdown(record)"><pause-circle-two-tone /></a-button>
             </span>
             <span>
-              <a-button type="link" @click = "delData(record.id)"><delete-two-tone /></a-button>
+              <a-button type="link" @click = "delData(record.id, 1)"><delete-two-tone /></a-button>
             </span>
             <span>
-              <a-button @click = "showStrategyScriptModal(record.id)" type="link"><CodeTwoTone /></a-button>
+              <a-button type="link" @click="showAddStrategyDetailModal(record.id, record.startegiesName)"><PlusCircleTwoTone /></a-button>
             </span>
           </template>
           <template v-if="column.key === 'status'">
@@ -43,12 +43,20 @@
           </template>
         </template>
         <template #expandedRowRender = "{ record }">
-          <a-table :columns="innerColumns" :data-source="record.strategyDetails" :pagination="false">
+          <a-table :columns="innerColumns" :data-source="record.strategyDetails" :pagination="false" :customRow="customRow" :customHeaderRow="customHeaderRow">
             <template #bodyCell="{ column , record}">
+              <template v-if="column.key === 'move'">
+                <a-button type="link" @click ="moveStrategyDetailIndex(record.key, 'up')" size="small"><UpOutlined two-tone-color="blue" style="font-size: 10px;"/></a-button>
+                <a-button type="link" @click ="moveStrategyDetailIndex(record.key, 'down')" size="small"><DownOutlined two-tone-color="blue" style="font-size: 10px;"/></a-button>
+              </template>
+              <template v-if="column.key === 'operation'">
+                <a-button type="link" @click = "delData(record.key, 0)" size="small"><MinusCircleTwoTone two-tone-color="red"/></a-button>
+                <a-button type="link" @click = "showStrategyScriptModal(record.key)" size="small"><CodeTwoTone/></a-button>
+              </template>
               <template v-if="column.key === 'stat'">
                 <span v-if="record.stat == 1">
                   <a-badge status="success"/>
-                  <a-tag color="success"><b>NORMALLY</b></a-tag>
+                  <a-tag :bordered="false" color="success" style="font-size: 9px;"><b>NORMALLY</b></a-tag>
                 </span>
                 <span v-else>
                   <a-tooltip placement="top">
@@ -56,52 +64,55 @@
                       <span>{{ record.statMsg }}</span>
                     </template>
                     <a-badge status="error"/>
-                    <a-tag color="error"><b>ABNORMAL</b></a-tag>
+                    <a-tag :bordered="false" color="error" style="font-size: 9px;"><b>ABNORMAL</b></a-tag>
                   </a-tooltip>
                 </span>
               </template>
             </template>
           </a-table>
-<!--          <a-row>-->
-<!--            <a-col :span="12">-->
-<!--              <script-editor-->
-<!--                  v-model:script="record.strategyScript.startup.script"-->
-<!--                  v-model:switched="record.strategyScript.startup.priorExec"-->
-<!--                  switchOnTip="在环境启用前执行"-->
-<!--                  switch-off-tip="在环境启用后执行"-->
-<!--                  :maxLines="3"-->
-<!--                  :minLines="3"-->
-<!--                  :readonly="true"-->
-<!--                  title="启用时脚本">-->
-<!--              </script-editor>-->
-<!--            </a-col>-->
-<!--            <a-col :span="12">-->
-<!--              <script-editor-->
-<!--                  v-model:script="record.strategyScript.shutdown.script"-->
-<!--                  v-model:switched="record.strategyScript.shutdown.priorExec"-->
-<!--                  switchOnTip="在环境关停前执行"-->
-<!--                  switch-off-tip="在环境关停后执行"-->
-<!--                  :maxLines="3"-->
-<!--                  :minLines="3"-->
-<!--                  :readonly="true"-->
-<!--                  title="关停时脚本">-->
-<!--              </script-editor>-->
-<!--            </a-col>-->
-<!--          </a-row>-->
         </template>
       </a-table>
     </a-col>
   </a-row>
-  <a-modal title="环境关联脚本设置" width="800" v-model:visible="isStrategyScriptModalVisible" @cancel="isStrategyScriptModalVisible = false">
+
+  <a-modal title="新增关联环境" width="800" v-model:visible="isStrategyModalVisible" @cancel="isStrategyModalVisible = false">
+    <a-form
+        :model="strategyInfo.strategyDetails[0]"
+        ref="newFormRef"
+        name="basic"
+        autocomplete="off">
+      <a-form-item label="策略名称" name="strategyName">
+        <b>{{ strategyInfo.strategyName }}</b>
+      </a-form-item>
+      <a-form-item
+          label="可执行文件"
+          name="executablePath">
+        <input type="file" @change="strategyDetailHandleFileChange" accept=".exe,.bat,.service"/>
+      </a-form-item>
+
+      <a-table
+          :row-selection="{ onChange: onSelectChange}"
+          :data-source="scanData"
+          :columns="sanTableColumns"
+      />
+
+    </a-form>
+    <template #footer>
+      <a-button @click="isStrategyModalVisible = false">取消</a-button>
+      <a-button type="primary" @click="saveStrategyDetail">确定</a-button>
+    </template>
+  </a-modal>
+
+  <a-modal title="环境关联脚本设置" width="800" v-model:visible="isScriptModalVisible" @cancel="isScriptModalVisible = false">
     <a-form
         name="scriptModal"
-        :model="strategyScript"
+        :model="strategyInfo.strategyScript"
         autocomplete="off">
       <a-row>
         <a-col :span="11">
             <script-editor
-                v-model:script="strategyScript.scriptWithStart"
-                v-model:switched="strategyScript.startScriptPriorExec"
+                v-model:script="strategyInfo.strategyScript.startup.script"
+                v-model:switched="strategyInfo.strategyScript.startup.priorExec"
                 switchOnTip="在环境启用前执行"
                 switch-off-tip="在环境启用后执行"
                 title="启用时脚本">
@@ -110,8 +121,8 @@
         <a-col :span="2"></a-col>
         <a-col :span="11">
           <script-editor
-              v-model:script="strategyScript.scriptWithShutdown"
-              v-model:switched="strategyScript.shutdownScriptPriorExec"
+              v-model:script="strategyInfo.strategyScript.shutdown.script"
+              v-model:switched="strategyInfo.strategyScript.shutdown.priorExec"
               switchOnTip="在环境关停前执行"
               switch-off-tip="在环境关停后执行"
               title="关停时脚本">
@@ -121,7 +132,7 @@
 
     </a-form>
     <template #footer>
-      <a-button @click="isStrategyScriptModalVisible = false">取消</a-button>
+      <a-button @click="isScriptModalVisible = false">取消</a-button>
       <a-button type="primary" @click="saveStrategyScript">确定</a-button>
     </template>
   </a-modal>
@@ -131,13 +142,36 @@
 
 import { defineComponent, ref, onMounted} from 'vue';
 import { notification, Modal } from 'ant-design-vue';
-import { PlayCircleTwoTone, DeleteTwoTone, PauseCircleTwoTone, SyncOutlined, CodeTwoTone} from '@ant-design/icons-vue'
+import { PlayCircleTwoTone, DeleteTwoTone, PauseCircleTwoTone, SyncOutlined, CodeTwoTone, MinusCircleTwoTone, DownOutlined, UpOutlined, PlusCircleTwoTone} from '@ant-design/icons-vue'
 
 import ScriptEditor from "@/components/ScriptEditor";
+import {Strategy} from "@/comm/vo";
 
 const enums = require('@/comm/enum');
-const { StrategyScript } = require('@/comm/vo');
+// const { StrategyScript } = require('@/comm/vo');
 const handlerMsg = require('@/electron/handlers/enum');
+
+const sanTableColumns = [{
+  title:'可执行文件名称',
+  dataIndex:'exec',
+  key:'exec'
+},{
+  title:'路径',
+  dataIndex:'executablePath',
+  key:'executablePath'
+},{
+  title:'关联环境名称',
+  dataIndex:'associatedEnvironment',
+  key:'associatedEnvironment'
+},{
+  title:'环境类型',
+  dataIndex:'environmentType',
+  key:'environmentType'
+},{
+  title:'备注',
+  dataIndex:'environmentDetial',
+  key:'environmentDetial'
+}];
 
 const columns = [{
   title: '策略名称',
@@ -157,6 +191,9 @@ const columns = [{
 }];
 
 const innerColumns = [{
+  key:'move',
+  width:20
+},{
   title:'可执行文件名称',
   dataIndex:'exec',
   key:'exec'
@@ -176,6 +213,9 @@ const innerColumns = [{
   title:'状态',
   dataIndex:'stat',
   key:'stat'
+},{
+  title: '操作',
+  key:'operation'
 }];
 
 
@@ -184,40 +224,119 @@ export default defineComponent({
 
     const data = ref([]);
 
-    const scriptStrategyKey = ref('');
-
-    const strategyScript = ref({
-      scriptWithStart:'',
-      startScriptPriorExec:false,
-      scriptWithShutdown:'',
-      shutdownScriptPriorExec:false
-    })
+    const scanData = ref([]);
 
 
-    //保存到现有策略模态窗口可见状态控制变量
-    const isStrategyScriptModalVisible = ref(false);
+    const strategyInfo = ref(new Strategy().getJson());
 
-    const showStrategyScriptModal = (strategyKey) =>{
-      isStrategyScriptModalVisible.value = true;
+    //策略脚本窗口可见状态
+    const isScriptModalVisible = ref(false);
 
-      scriptStrategyKey.value = strategyKey;
+    //策略明细新增窗口可见状态
+    const isStrategyModalVisible = ref(false);
+    const isScan = ref(false);
 
-      strategyScript.value.scriptWithStart = '';
-      strategyScript.value.startScriptPriorExec = false;
-      strategyScript.value.scriptWithShutdown = '';
-      strategyScript.value.shutdownScriptPriorExec = false;
+    const strategyDetailHandleFileChange = (e) =>{
+      // strategyInfo.value.strategyDetails[0].executablePath = e.target.files[0].path;
 
-      window.electronAPI.once(handlerMsg.MSG_EGT_SCRIPT_BY_STRATEGY,  (result) =>{
+      scanData.value = [];
+      window.electronAPI.once(handlerMsg.MSG_SCAN_FILE,  (result) =>{
+        // console.log(result)
+        if(result.ret == 0){
+          if(Array.isArray(result.data) && result.data.length > 0){
+            for (let i = 0; i < result.data.length; i++){
+              scanData.value.push({
+                key: result.data[i].key,
+                exec: result.data[i].exec,
+                executablePath: result.data[i].path,
+                associatedEnvironment: result.data[i].env,
+                environmentDetial: result.data[i].comment,
+                environmentType: result.data[i].type
+              });
+            }
+          }
+        }
+      });
+
+      window.electronAPI.call(handlerMsg.MSG_SCAN_FILE, e.target.files[0].path);
+    }
+
+    const showAddStrategyDetailModal = (strategyKey, startegiesName) =>{
+      isStrategyModalVisible.value = true;
+      strategyInfo.value.id = strategyKey;
+      strategyInfo.value.strategyName = startegiesName;
+      strategyInfo.value.strategyDetails = [];
+      scanData.value = [];
+    }
+
+    const onSelectChange = (selectedRowKeys, selectedRows) =>{
+      // console.log(selectedRows);
+      strategyInfo.value.strategyDetails = selectedRows;
+    }
+
+    const saveStrategyDetail = () =>{
+      window.electronAPI.once(handlerMsg.MSG_SAVE_STRATEGY,  (result) =>{
+        if(result.ret == 0){
+          notification.success({
+            message: '提醒',
+            description: '保存成功'
+          });
+          isStrategyModalVisible.value = false;
+          reflash();
+        }else{
+          notification.error({
+            message: '提醒',
+            description: '保存失败，原因：' + result.data
+          });
+        }
+      });
+
+      let strategy = JSON.parse(JSON.stringify(strategyInfo.value));
+
+      window.electronAPI.call(handlerMsg.MSG_SAVE_STRATEGY, strategy);
+    }
+
+    const moveStrategyDetailIndex = (id, moveType) =>{
+      window.electronAPI.once(handlerMsg.MSG_MOVE_STRATEGY_DETAIL_INDEX, (result) =>{
+        if(result.ret == 0){
+          reflash();
+        }else{
+          notification.error({
+            message: '提醒',
+            description: result.data
+          });
+        }
+      });
+
+      window.electronAPI.call(handlerMsg.MSG_MOVE_STRATEGY_DETAIL_INDEX, {'strategyDetailId':id, 'moveType':moveType});
+    }
+
+
+    const showStrategyScriptModal = (StrategyDetailsID) =>{
+      isScriptModalVisible.value = true;
+
+      strategyInfo.value.id = StrategyDetailsID;
+
+      strategyInfo.value.strategyScript.startup.strategyDetailsID = StrategyDetailsID;
+      strategyInfo.value.strategyScript.startup.script = '';
+      strategyInfo.value.strategyScript.startup.priorExec = false;
+      strategyInfo.value.strategyScript.startup.type = enums.StrategyScriptType.WITH_STARTUP;
+      strategyInfo.value.strategyScript.shutdown.strategyDetailsID = StrategyDetailsID;
+      strategyInfo.value.strategyScript.shutdown.script = '';
+      strategyInfo.value.strategyScript.shutdown.priorExec = false;
+      strategyInfo.value.strategyScript.shutdown.type = enums.StrategyScriptType.WITH_SHUTDOWN;
+
+      window.electronAPI.once(handlerMsg.MSG_GET_SCRIPT_BY_STRATEGY,  (result) =>{
 
         if(result.ret == 0){
 
           for (const script of result.data) {
             if (script.type == enums.StrategyScriptType.WITH_STARTUP){
-              strategyScript.value.scriptWithStart = script.script;
-              strategyScript.value.startScriptPriorExec = script.priorExec;
+              strategyInfo.value.strategyScript.startup.script = script.script;
+              strategyInfo.value.strategyScript.startup.priorExec = script.priorExec;
             }else {
-              strategyScript.value.scriptWithShutdown = script.script;
-              strategyScript.value.shutdownScriptPriorExec = script.priorExec;
+              strategyInfo.value.strategyScript.shutdown.script = script.script;
+              strategyInfo.value.strategyScript.shutdown.priorExec = script.priorExec;
             }
           }
         }else {
@@ -228,22 +347,10 @@ export default defineComponent({
         }
       });
 
-      window.electronAPI.call(handlerMsg.MSG_EGT_SCRIPT_BY_STRATEGY, strategyKey);
+      window.electronAPI.call(handlerMsg.MSG_GET_SCRIPT_BY_STRATEGY, StrategyDetailsID);
     }
 
     const saveStrategyScript = () =>{
-      let strategyScriptWithStart = new StrategyScript().getJson();
-      let strategyScriptWithShutdown = new StrategyScript().getJson();
-
-      strategyScriptWithStart.strategyKey = scriptStrategyKey.value;
-      strategyScriptWithStart.type = enums.StrategyScriptType.WITH_STARTUP;
-      strategyScriptWithStart.script = strategyScript.value.scriptWithStart;
-      strategyScriptWithStart.priorExec = strategyScript.value.startScriptPriorExec;
-
-      strategyScriptWithShutdown.strategyKey = scriptStrategyKey.value;
-      strategyScriptWithShutdown.type = enums.StrategyScriptType.WITH_SHUTDOWN;
-      strategyScriptWithShutdown.script = strategyScript.value.scriptWithShutdown;
-      strategyScriptWithShutdown.priorExec = strategyScript.value.shutdownScriptPriorExec;
 
       window.electronAPI.once(handlerMsg.MSG_SVAE_SCRIPT,  (result) =>{
 
@@ -259,17 +366,20 @@ export default defineComponent({
           })
         }
 
-        isStrategyScriptModalVisible.value = false;
+        isScriptModalVisible.value = false;
       });
 
-      window.electronAPI.call(handlerMsg.MSG_SVAE_SCRIPT, [strategyScriptWithStart, strategyScriptWithShutdown]);
+      //为了解决An object could not be cloned报错的愚蠢的做法，后续换TypeScript要重点解决
+      let startupScript = JSON.parse(JSON.stringify(strategyInfo.value.strategyScript.startup));
+      let shutdownScript = JSON.parse(JSON.stringify(strategyInfo.value.strategyScript.shutdown));
+
+      window.electronAPI.call(handlerMsg.MSG_SVAE_SCRIPT, [startupScript, shutdownScript]);
     }
 
     const reflash = ()=> {
 
       //数据刷新成功
       window.electronAPI.once(handlerMsg.MSG_GET_ALL_STRATEGY_BY_STAT, function (result) {
-        console.log(result)
         if(result.ret == 0){
           data.value = [];
           data.value = result.data;
@@ -285,44 +395,44 @@ export default defineComponent({
       window.electronAPI.call(handlerMsg.MSG_GET_ALL_STRATEGY_BY_STAT);
     }
 
-    const delData = function (id){
-
+    const delData = (id, type) => {
       Modal.confirm({
         title: '删除',
         content: '确定删除吗？',
         okText: '确定',
         okType: 'danger',
         cancelText: '取消',
-        onOk:() => {
-          window.electronAPI.once(handlerMsg.MSG_DEL_STRATEGY, (result) =>{
-            // console.log(result)
-            if(result.ret == 0){
+        onOk: () => {
+          let delIds = [id];
+          const msgType = type === 1 ? handlerMsg.MSG_DEL_STRATEGY : handlerMsg.MSG_DEL_STRATEGY_DETAIL;
+          const successMessage = '删除成功';
+          const errorMessage = '删除失败，原因：${result.data}';
+
+          const handleResult = (result) => {
+            if (result.ret === 0) {
               reflash();
               notification.success({
                 message: '提醒',
-                description:'删除成功'
-              })
-            }else {
+                description: successMessage
+              });
+            } else {
               notification.error({
                 message: '提醒',
-                description:'删除失败，原因：' + result.data
-              })
+                description: errorMessage.replace('${result.data}', result.data)
+              });
             }
-          })
+          };
 
-          let delIds = [id];
-
-          window.electronAPI.call(handlerMsg.MSG_DEL_STRATEGY, delIds);
+          window.electronAPI.once(msgType, handleResult);
+          window.electronAPI.call(msgType, delIds);
         }
       });
+    };
 
-    }
 
 
     const startup = (record) => {
       let recordStr = JSON.stringify(record)
-
-      console.log(recordStr)
 
       Modal.confirm({
         title: '启用',
@@ -390,19 +500,45 @@ export default defineComponent({
       reflash();
     });
 
+    const customRow = () => {
+      return {
+        style: {
+          'font-size' : '10px'
+        },
+      }
+    }
+
+    const customHeaderRow = () => {
+      return {
+        style: {
+          'font-size' : '10px'
+        },
+      }
+    }
+
     return {
       columns,
       innerColumns,
+      sanTableColumns,
+      onSelectChange,
       data,
+      scanData,
       reflash,
       delData,
       startup,
       shutdown,
-      strategyScript,
-      scriptStrategyKey,
-      isStrategyScriptModalVisible,
+      isScan,
+      strategyInfo,
+      isScriptModalVisible,
+      isStrategyModalVisible,
       showStrategyScriptModal,
-      saveStrategyScript
+      showAddStrategyDetailModal,
+      strategyDetailHandleFileChange,
+      saveStrategyDetail,
+      moveStrategyDetailIndex,
+      saveStrategyScript,
+      customRow,
+      customHeaderRow
     };
   },
   name: "ControlPanel",
@@ -412,6 +548,10 @@ export default defineComponent({
     PauseCircleTwoTone,
     SyncOutlined,
     CodeTwoTone,
+    MinusCircleTwoTone,
+    DownOutlined,
+    UpOutlined,
+    PlusCircleTwoTone,
     ScriptEditor
   }
 })
@@ -420,6 +560,10 @@ export default defineComponent({
 </script>
 
 <style scoped>
+
+.innerTable{
+  font-size: 9px;
+}
 
 /deep/ .ant-table-body::-webkit-scrollbar,
 .info::-webkit-scrollbar {

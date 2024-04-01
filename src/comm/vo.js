@@ -5,7 +5,7 @@ class StrategyScript {
     constructor() {
         this.data = {
             id:'',
-            strategyKey : '',  //策略ID
+            strategyDetailsID : '',  //策略明细ID
             type:true,            //脚本类型
             priorExec:false,   //是否先于关联环境运行
             script : ''        //脚本详情
@@ -49,6 +49,7 @@ class StrategyDetails {
     constructor() {
         this.data = {
             id:'',                      //ID
+            index : '',                 //启动顺序
             strategyID : '',            //策略ID
             associatedEnvironment:'',   //关联环境名称
             environmentType:'',         //关联环境类型

@@ -27,13 +27,18 @@ function databaseClose(){
  * @param win 创建UI窗口
  */
 function ipcSetup(ipcMain, win){
-    ipcMain.on(listenerEnums.MSG_SCAN, (event, scanPath) => {
+    ipcMain.on(listenerEnums.MSG_SCAN_PATH, (event, scanPath) => {
         scanHandler.scan(scanPath,
             (finded) => {
             win.webContents.send(listenerEnums.MSG_SCAN_FINDED, finded);
         }, () =>{
             win.webContents.send(listenerEnums.MSG_SCAN_COMPLETE);
         });
+    });
+
+    ipcMain.on(listenerEnums.MSG_SCAN_FILE, (event, scanPath) => {
+        let ret = scanHandler.scanFile(scanPath);
+        win.webContents.send(listenerEnums.MSG_SCAN_FILE, ret);
     });
 
     ipcMain.on(listenerEnums.MSG_SAVE_STRATEGY, (event, strategy) => {
@@ -63,10 +68,31 @@ function ipcSetup(ipcMain, win){
 
     });
 
-    ipcMain.on(listenerEnums.MSG_EGT_SCRIPT_BY_STRATEGY, (event, id)=>{
-        scriptHandler.getScriptByStrategyID(id, (res)=>{
-            // console.log(res)
-            win.webContents.send(listenerEnums.MSG_EGT_SCRIPT_BY_STRATEGY, res);
+    // // 监听保存策略详情的事件
+    // ipcMain.on(listenerEnums.MSG_SAVE_STRATEGY_DETAIL, (event, strategyDetail) => {
+    //     strategyHandler.saveStrategyDetail(strategyDetail,(ret)=>{
+    //         win.webContents.send(listenerEnums.MSG_SAVE_STRATEGY_DETAIL, ret);
+    //     })
+    //
+    // });
+
+    // 监听删除策略详情的事件
+    ipcMain.on(listenerEnums.MSG_DEL_STRATEGY_DETAIL, (event, strategyDetailId) => {
+        strategyHandler.deleteStrategyDetail(strategyDetailId,(ret)=>{
+            win.webContents.send(listenerEnums.MSG_DEL_STRATEGY_DETAIL, ret);
+        })
+    });
+
+    //移动策略详情执行顺序
+    ipcMain.on(listenerEnums.MSG_MOVE_STRATEGY_DETAIL_INDEX, (event, param) => {
+        strategyHandler.moveStrategyDetailIndex(param.strategyDetailId, param.moveType,(ret)=>{
+            win.webContents.send(listenerEnums.MSG_MOVE_STRATEGY_DETAIL_INDEX, ret);
+        })
+    });
+
+    ipcMain.on(listenerEnums.MSG_GET_SCRIPT_BY_STRATEGY, (event, id)=>{
+        scriptHandler.getScriptByStrategyDetailsID(id, (res)=>{
+            win.webContents.send(listenerEnums.MSG_GET_SCRIPT_BY_STRATEGY, res);
         });
     })
 
@@ -98,14 +124,14 @@ function ipcSetup(ipcMain, win){
 
     //启用环境
     ipcMain.on(listenerEnums.MSG_ENV_STARTUP, (event, args) => {
-        ctrlHandler.startup(args, (res)=>{
+        ctrlHandler.startup(args).then(res =>{
             win.webContents.send(listenerEnums.MSG_ENV_STARTUP, res);
         })
     });
 
     //终止环境
     ipcMain.on(listenerEnums.MSG_ENV_SHUTDOWN, (event, args) =>{
-        ctrlHandler.shutdown(args, (res)=>{
+        ctrlHandler.shutdown(args).then((res)=>{
             win.webContents.send(listenerEnums.MSG_ENV_SHUTDOWN, res);
         });
     });
