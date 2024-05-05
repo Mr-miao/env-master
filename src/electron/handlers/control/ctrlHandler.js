@@ -57,7 +57,7 @@ const startup = async (env)=>{
                     }
                     break;
                 case 'exec' :
-                    actionRet = envtools.startExec(items[i].path);
+                    actionRet = envtools.startExec(items[i].path.replace(/\\/g, "/"));
                     if(actionRet.retCode != 0){
                         result.ret = -1;
                         result.data += items[i].env + '操作未成功，因为：' + actionRet.data + '\n'
@@ -154,12 +154,12 @@ const shutdown = async (env)=>{
                     return result;
                 }
             }
-
-            return result;
         }else {
             return res;
         }
     }
+
+    return result;
 
 
 }

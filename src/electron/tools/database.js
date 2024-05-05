@@ -4,7 +4,7 @@ const process = require("process");
 const log = require('@/electron/tools/log')
 
 const dbPath = path.resolve(process.cwd(),'env_master_db.db');
-log.info(dbPath);
+
 const knexConfig = {
     client: 'sqlite3', // or 'better-sqlite3'
     useNullAsDefault: true,
