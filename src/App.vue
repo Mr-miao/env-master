@@ -1,9 +1,16 @@
 <template>
   <a-row>
-    <a-col :span="4">
+    <a-col :span="5">
       <a-badge color="#87d068" text="EnvMaster" />
+      &nbsp;
+      <a-tag color="processing">
+        <template #icon>
+          <ExclamationCircleFilled />
+        </template>
+        Beta_v_{{ version }}
+      </a-tag>
     </a-col>
-    <a-col :span="14">
+    <a-col :span="13">
       <div id="tool-bar">&nbsp;</div>
     </a-col>
     <a-col :span="6">
@@ -47,7 +54,7 @@
 
 <script>
 import { defineComponent, ref} from 'vue';
-import { SlidersOutlined, SearchOutlined, MinusOutlined, BorderOutlined, CloseOutlined,SwitcherOutlined} from '@ant-design/icons-vue';
+import { ExclamationCircleFilled, SlidersOutlined, SearchOutlined, MinusOutlined, BorderOutlined, CloseOutlined,SwitcherOutlined} from '@ant-design/icons-vue';
 
 import EnvScanner  from './components/EnvScanner.vue'
 import ControlPanel  from './components/ControlPanel.vue'
@@ -94,7 +101,8 @@ export default defineComponent({
       handleClick,
       minimizeWin,
       maximizeWin,
-      closeWin
+      closeWin,
+      version: process.env.VUE_APP_VERSION || 'unknown'
     }
   },
   name:'App',
@@ -106,7 +114,8 @@ export default defineComponent({
     MinusOutlined,
     BorderOutlined,
     CloseOutlined,
-    SwitcherOutlined
+    SwitcherOutlined,
+    ExclamationCircleFilled
   }
 });
 </script>
