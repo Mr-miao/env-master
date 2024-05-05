@@ -44,16 +44,14 @@ async function scanFolder(folderPath, onScanning, onScanComplete) {
 
                     //todo 后续要做成根据设置项来打开下面查找exe的操作，
 
-                    // if(serviceInfo.retCode == -2 && startupInfo.retCode == -2 && startupInfo.retCode == -2){
-                    //     findedArr.push({
-                    //         'key':until.getUUID(),
-                    //         'exec':path.basename(filePath),
-                    //         'path':filePath,
-                    //         'env':path.basename(filePath),
-                    //         'comment':'',
-                    //         'type':'exec'
-                    //     });
-                    // }
+                    findedArr.push({
+                        'key':until.getUUID(),
+                        'exec':path.basename(filePath),
+                        'path':filePath,
+                        'env':path.basename(filePath),
+                        'comment':'',
+                        'type':'exec'
+                    });
 
                     // 拼接服务返回结果
                     if (serviceInfo.retCode == 0){
