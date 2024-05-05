@@ -13,7 +13,6 @@ const getScriptByStrategyDetailsID = (id, callback) => {
             strategyScript.type = row.Type == 1 ? true : false;
             strategyScript.priorExec = row.PriorExec == 1 ? true : false;
             strategyScript.script = row.Script;
-            // console.log(strategyScript)
             strategyScriptArr.push(strategyScript);
         }
 

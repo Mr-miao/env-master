@@ -1,23 +1,32 @@
 const { defineConfig } = require('@vue/cli-service');
-// const path = require('path');
 
 module.exports = defineConfig({
   transpileDependencies: true,
-  // configureWebpack: {
-  //   externals: {
-  //     knex: "require('knex')",
-  //   }
-  // },
-  // chainWebpack: config => {
-  //   config.module
-  //       .rule('node')
-  //       .test(/\.node$/)
-  //       .use('node-loader')
-  //       .loader('node-loader')
-  //       .end()
-  // },
   pluginOptions: {
     electronBuilder: {
+      customFileProtocol: './',
+      builderOptions:{
+        "appId": "com.tomwill.envmaster",
+        "productName": "EnvMaster",
+        "directories": {
+          "output": "release/"
+        },
+        asar: true,
+        "win": {
+          "target": "nsis",
+          "icon": "public/app-icon.png",
+          "requestedExecutionLevel":"requireAdministrator"
+        },
+        "nsis": {
+          "oneClick": false,
+          "perMachine": true,
+          "allowElevation": true,
+          "allowToChangeInstallationDirectory": true,
+          "createDesktopShortcut": true,
+          "createStartMenuShortcut": true,
+          "shortcutName": "EnvMaster"
+        }
+      },
       externals: ['node-pre-gyp','knex','better-sqlite3'],
       // nodeIntegration: true,
       preload: "src/electron/preload.js",

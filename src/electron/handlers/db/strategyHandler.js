@@ -1,13 +1,10 @@
 const dbTool = require("@/electron/tools/database");
 const until = require("@/comm/until");
 const ctrl = require("@/electron/tools/ctrl");
-// const scriptHandler = require("@/electron/handlers/db/scriptHandler");
 
 const { Strategy } = require("@/comm/vo");
-// const enums = require("@/comm/enum");
 
 const getStrategy = (strategy, callback) => {
-    // console.log(strategy)
     if (strategy){
         dbTool.getKnex()
             .select()
@@ -164,7 +161,6 @@ const saveStrategy = (strategy, callback) =>{
                     return trx.insert(strategyDetailsArr).into('strategy_details');
                 })
         }).then(function(inserts) {
-            // console.log(inserts)
             let res ={'ret':0, 'data':inserts};
             callback(res);
         }).catch(function(error) {
@@ -187,7 +183,7 @@ const saveStrategy = (strategy, callback) =>{
                         .then(maxIndexResult => {
                             // maxIndexResult是一个对象，通常键是列名，值是计算出的最大值
                             const maxIndex = maxIndexResult[0].max_index;
-                            console.log(strategy.strategyDetails)
+                            // console.log(strategy.strategyDetails)
                             let strategyDetailsArr = new Array();
                             for (let i = 1; i <= strategy.strategyDetails.length; i++) {
                                 let row = strategy.strategyDetails[i - 1];

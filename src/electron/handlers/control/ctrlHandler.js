@@ -5,11 +5,10 @@ const enums = require("@/comm/enum");
 
 const startup = async (env)=>{
     let record = JSON.parse(env);
-    // console.log(record)
 
     let items = record.strategyDetails;
     let actionRet;
-    let startupScript;
+    let startupScript = undefined;
     let execRet;
     let result = {
         ret : 0,
@@ -26,7 +25,7 @@ const startup = async (env)=>{
                 }
             }
 
-            if(startupScript.priorExec){
+            if(startupScript != undefined && startupScript.priorExec){
                 execRet = await shell.exec(startupScript);
                 if(execRet.retCode != 0){
                     result.ret = -1;
@@ -66,7 +65,7 @@ const startup = async (env)=>{
                     break;
             }
 
-            if(!startupScript.priorExec){
+            if(startupScript != undefined && !startupScript.priorExec){
                 execRet = await shell.exec(startupScript);
                 if(execRet.retCode != 0){
                     result.ret = -1;
@@ -74,24 +73,23 @@ const startup = async (env)=>{
                     return result;
                 }
             }
-
-            return result;
         }else {
             return res;
         }
 
     }
 
+    return result;
+
 
 }
 
 const shutdown = async (env)=>{
     let record = JSON.parse(env);
-    // console.log(record)
 
     let items = record.strategyDetails;
     let actionRet;
-    let shutdownScript;
+    let shutdownScript = undefined;
     let execRet
     let result = {
         ret : 0,
@@ -108,7 +106,7 @@ const shutdown = async (env)=>{
                 }
             }
 
-            if(shutdownScript.priorExec){
+            if(shutdownScript != undefined && shutdownScript.priorExec){
                 execRet = await shell.exec(shutdownScript);
                 if(execRet.retCode != 0){
                     result.ret = -1;
@@ -148,7 +146,7 @@ const shutdown = async (env)=>{
                     break;
             }
 
-            if(!shutdownScript.priorExec){
+            if(shutdownScript != undefined && !shutdownScript.priorExec){
                 execRet = await shell.exec(shutdownScript);
                 if(execRet.retCode != 0){
                     result.ret = -1;

@@ -23,7 +23,6 @@ async function scanFolder(folderPath, onScanning, onScanComplete) {
 
     while(files.length > 0){
         try{
-            // console.log(files)
             let file = files.pop();
             filePath = path.join(folderPath, file);
             let stats = await fs.stat(filePath);
@@ -113,7 +112,6 @@ async function scanFolder(folderPath, onScanning, onScanComplete) {
                         onScanning(findedArr);
                     }
 
-                    // console.log(serviceInfo);
                 }
             } else if (stats.isDirectory()) {
                 let subFiles = await fs.readdir(filePath);

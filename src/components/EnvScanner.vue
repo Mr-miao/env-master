@@ -118,7 +118,6 @@ let tableSelectedRows = [];
 
 export default defineComponent({
   setup() {
-    // console.log(loadingStat);
     //扫描结果表格数据
     const sanTableData =ref([]);
     //扫描按钮加载状态控制变量
@@ -153,7 +152,6 @@ export default defineComponent({
     })
     //注册扫描中监听返回的事件处理函数
     window.electronAPI.on(handlerMsg.MSG_SCAN_FINDED,(sanRes) => {
-      // console.log(sanRes)
       for (let i = 0; i < sanRes.length; i++) {
         sanTableData.value.push(sanRes[i]);
       }
@@ -236,7 +234,6 @@ export default defineComponent({
         strategy.startegiesName = values.strategyName;
         strategy.description = values.strategyDescription;
 
-        // console.log(tableSelectedRows)
 
         for (let i = 0; i < tableSelectedRows.length; i++) {
           let row = tableSelectedRows[i];
@@ -250,7 +247,6 @@ export default defineComponent({
 
           strategy.strategyDetails.push(strategyDetail);
         }
-        // console.log(strategy);
 
         //数据库脚本执行成功事件
         window.electronAPI.once(handlerMsg.MSG_SAVE_STRATEGY,function (result) {

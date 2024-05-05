@@ -241,7 +241,6 @@ export default defineComponent({
 
       scanData.value = [];
       window.electronAPI.once(handlerMsg.MSG_SCAN_FILE,  (result) =>{
-        // console.log(result)
         if(result.ret == 0){
           if(Array.isArray(result.data) && result.data.length > 0){
             for (let i = 0; i < result.data.length; i++){
@@ -270,7 +269,6 @@ export default defineComponent({
     }
 
     const onSelectChange = (selectedRowKeys, selectedRows) =>{
-      // console.log(selectedRows);
       strategyInfo.value.strategyDetails = selectedRows;
     }
 
@@ -383,7 +381,6 @@ export default defineComponent({
         if(result.ret == 0){
           data.value = [];
           data.value = result.data;
-          // console.log(result.data )
         }else {
           notification.error({
             message: '提醒',
