@@ -4,10 +4,7 @@
       <a-badge color="#87d068" text="EnvMaster" />
       &nbsp;
       <a-tag color="processing">
-        <template #icon>
-          <ExclamationCircleFilled />
-        </template>
-        Beta_v_{{ version }}
+        {{ version }}
       </a-tag>
     </a-col>
     <a-col :span="13">
