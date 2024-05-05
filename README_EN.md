@@ -1,5 +1,7 @@
 # EnvMaster
 
+[中文](https://github.com/Mr-miao/env-master/blob/master/README.md)|[English](https://github.com/Mr-miao/env-master/blob/master/README_EN.md)
+
 EnvMaster is a desktop application based on vue3+electron, used to manage switching development environments. In daily development, different projects require different development and testing environments. If all environments are started when the computer boots up, it will consume a lot of resources and also be inconvenient to manage. EnvMaster solves this problem by allowing users to start specific environments and manage switching between them.
 
 EnvMaster is built on Vue CLI Plugin Electron Builder. The project is divided into the application layer and the tool layer, with the application layer developed using vue3+electron and the tool layer developed using C++.
