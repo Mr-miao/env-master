@@ -1,4 +1,4 @@
-# EnvMaster
+# EnvMaster [中文](https://github.com/Mr-miao/env-master/blob/master/README.md)|[English](https://github.com/Mr-miao/env-master/blob/master/README_EN.md)
 
 EnvMaster是一个基于vue3+electron的桌面应用，用于管理开发环境的切换。
 在日常开发中，不同的项目所需的开发环境和测试环境是不一样的，如果所有的环境在计算机开机时都启动，那么会非常耗费资源，而且也不方便管理。
