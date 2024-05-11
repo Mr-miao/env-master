@@ -17,6 +17,9 @@
             <span v-if="record.status == 'down'">
               <a-button type="link" @click="startup(record)"><play-circle-two-tone /></a-button>
             </span>
+            <span v-else-if="record.status == 'executing'">
+              <a-button type="link"><loading-outlined /></a-button>
+            </span>
             <span v-else>
               <a-button type="link" @click="shutdown(record)"><pause-circle-two-tone /></a-button>
             </span>
@@ -142,7 +145,7 @@
 
 import { defineComponent, ref, onMounted} from 'vue';
 import { notification, Modal } from 'ant-design-vue';
-import { PlayCircleTwoTone, DeleteTwoTone, PauseCircleTwoTone, SyncOutlined, CodeTwoTone, MinusCircleTwoTone, DownOutlined, UpOutlined, PlusCircleTwoTone} from '@ant-design/icons-vue'
+import { PlayCircleTwoTone, DeleteTwoTone, PauseCircleTwoTone, SyncOutlined, CodeTwoTone, MinusCircleTwoTone, DownOutlined, UpOutlined, PlusCircleTwoTone, LoadingOutlined} from '@ant-design/icons-vue'
 
 import ScriptEditor from "@/components/ScriptEditor";
 import {Strategy} from "@/comm/vo";
@@ -438,6 +441,7 @@ export default defineComponent({
         okType: 'primary',
         cancelText: '取消',
         onOk:() => {
+          record.status = 'executing';
           window.electronAPI.once(handlerMsg.MSG_ENV_STARTUP, (res) =>{
             reflash();
             if(res.ret == 0){
@@ -471,6 +475,7 @@ export default defineComponent({
         okType: 'primary',
         cancelText: '取消',
         onOk:() => {
+          record.status = 'executing';
           window.electronAPI.once(handlerMsg.MSG_ENV_SHUTDOWN, (res) =>{
             reflash();
             if(res.ret == 0){
@@ -549,6 +554,7 @@ export default defineComponent({
     DownOutlined,
     UpOutlined,
     PlusCircleTwoTone,
+    LoadingOutlined,
     ScriptEditor
   }
 })

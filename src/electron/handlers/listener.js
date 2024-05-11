@@ -122,6 +122,11 @@ function ipcSetup(ipcMain, win){
         win.close();
     });
 
+    //窗口隐藏
+    ipcMain.on(listenerEnums.MSG_HIDEN_WIN, () => {
+        win.hide();
+    });
+
     //启用环境
     ipcMain.on(listenerEnums.MSG_ENV_STARTUP, (event, args) => {
         ctrlHandler.startup(args).then(res =>{

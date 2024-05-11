@@ -88,7 +88,6 @@ async function createWindow() {
     width: 1024,
     height: 768,
     frame: false,
-    skipTaskbar: true,
     icon: path.join(__static, "./app-icon.png"),
     webPreferences: {
       sandbox: false,
@@ -103,6 +102,8 @@ async function createWindow() {
       // webSecurity: false
     }
   });
+
+  win.setTitle('EnvMaster');
 
   // let devtools = new BrowserWindow();
 

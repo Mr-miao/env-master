@@ -84,7 +84,7 @@
 </template>
 
 <script>
-import { defineComponent, ref } from 'vue';
+import { defineComponent, ref} from 'vue';
 import { notification } from 'ant-design-vue';
 
 const { Strategy, StrategyDetails } = require('@/comm/vo');
@@ -107,7 +107,25 @@ const sanTableColumns = [{
 },{
   title:'环境类型',
   dataIndex:'type',
-  key:'type'
+  key:'type',
+  filters: [
+    {
+      text: 'exec',
+      value: 'exec',
+    },
+    {
+      text: 'service',
+      value: 'service',
+    },
+    {
+      text: 'startup',
+      value: 'startup',
+    },{
+      text: 'task',
+      value: 'task',
+    }
+  ],
+  onFilter: (value, record) => record.type.indexOf(value) === 0,
 },{
   title:'备注',
   dataIndex:'comment',
@@ -116,10 +134,12 @@ const sanTableColumns = [{
 
 let tableSelectedRows = [];
 
+
 export default defineComponent({
   setup() {
     //扫描结果表格数据
     const sanTableData =ref([]);
+
     //扫描按钮加载状态控制变量
     const loadingStat = ref(false);
     //策略新增按钮状态控制变量
@@ -143,7 +163,6 @@ export default defineComponent({
       strategyName : '',
       strategyDescription : ''
     });
-
 
 
     //注册扫描完成后的事件处理回调函数
@@ -334,7 +353,8 @@ export default defineComponent({
       handleNew,
       handleSaveto,
       scan,
-      onSelectChange};
+      onSelectChange
+    };
   },
   name: "EnvScanner"
 })

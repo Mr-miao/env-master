@@ -77,7 +77,7 @@ export default defineComponent({
     };
 
     const closeWin = ()=>{
-      window.electronAPI.call(listenerEnums.MSG_CLOSE_WIN);
+      window.electronAPI.call(listenerEnums.MSG_HIDEN_WIN);
     };
 
     //接收双击标题栏带来的窗口变化事件
@@ -102,7 +102,7 @@ export default defineComponent({
       version: process.env.VUE_APP_VERSION || 'unknown'
     }
   },
-  name:'App',
+  name:'EnvMaster',
   components:{
     EnvScanner,
     ControlPanel,
