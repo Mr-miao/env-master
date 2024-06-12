@@ -15,19 +15,19 @@
         <template #bodyCell="{ column , record}">
           <template v-if="column.key === 'operation'" >
             <span v-if="record.status == 'down'">
-              <a-button type="link" @click="startup(record)"><play-circle-two-tone /></a-button>
+              <a-button type="link" @click="startup(record)" :disabled="optBtnDisabled"><play-circle-two-tone /></a-button>
             </span>
             <span v-else-if="record.status == 'executing'">
               <a-button type="link"><loading-outlined /></a-button>
             </span>
             <span v-else>
-              <a-button type="link" @click="shutdown(record)"><pause-circle-two-tone /></a-button>
+              <a-button type="link" @click="shutdown(record)" :disabled="optBtnDisabled"><pause-circle-two-tone /></a-button>
             </span>
             <span>
-              <a-button type="link" @click = "delData(record.id, 1)"><delete-two-tone /></a-button>
+              <a-button type="link" @click = "delData(record.id, 1)" :disabled="optBtnDisabled"><delete-two-tone /></a-button>
             </span>
             <span>
-              <a-button type="link" @click="showAddStrategyDetailModal(record.id, record.startegiesName)"><PlusCircleTwoTone /></a-button>
+              <a-button type="link" @click="showAddStrategyDetailModal(record.id, record.startegiesName)" :disabled="optBtnDisabled"><PlusCircleTwoTone /></a-button>
             </span>
           </template>
           <template v-if="column.key === 'status'">
@@ -226,6 +226,8 @@ export default defineComponent({
   setup() {
 
     const data = ref([]);
+
+    const optBtnDisabled = ref(false);
 
     const scanData = ref([]);
 
@@ -442,6 +444,8 @@ export default defineComponent({
         cancelText: '取消',
         onOk:() => {
           record.status = 'executing';
+          //禁用所有策略的可操作按钮
+          optBtnDisabled.value = true;
           window.electronAPI.once(handlerMsg.MSG_ENV_STARTUP, (res) =>{
             reflash();
             if(res.ret == 0){
@@ -456,6 +460,9 @@ export default defineComponent({
                 description:'执行失败，原因：' + res.data
               })
             }
+
+            //禁用所有策略的可操作按钮
+            optBtnDisabled.value = false;
           })
 
           window.electronAPI.call(handlerMsg.MSG_ENV_STARTUP, recordStr);
@@ -476,6 +483,9 @@ export default defineComponent({
         cancelText: '取消',
         onOk:() => {
           record.status = 'executing';
+          //禁用所有策略的可操作按钮
+          optBtnDisabled.value = true;
+
           window.electronAPI.once(handlerMsg.MSG_ENV_SHUTDOWN, (res) =>{
             reflash();
             if(res.ret == 0){
@@ -490,6 +500,9 @@ export default defineComponent({
                 description:'执行失败，原因：' + res.data
               })
             }
+
+            //禁用所有策略的可操作按钮
+            optBtnDisabled.value = false;
           })
 
           window.electronAPI.call(handlerMsg.MSG_ENV_SHUTDOWN, recordStr);
@@ -540,7 +553,8 @@ export default defineComponent({
       moveStrategyDetailIndex,
       saveStrategyScript,
       customRow,
-      customHeaderRow
+      customHeaderRow,
+      optBtnDisabled
     };
   },
   name: "ControlPanel",
