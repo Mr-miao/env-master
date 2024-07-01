@@ -10,12 +10,12 @@ EnvMaster基于Vue CLI Plugin Electron Builder构建，整个项目分为应用�
 
 EnvMaster具备以下功能：
 1. 扫描指定目录下可执行程序对应的开机启动项、service、计划任务
-2. 根据自身开发需要进行开机启动项、service、计划任务的组合，实现一键启停
-3. 支持针对每一个可执行程序对应的环境编制启动前脚本和启动后脚本
+2. 根据自身开发需要进行开机启动项、service、计划任务的组合，实现环境的一键启停
+3. 支持针对每一个可执行程序对应的环境编制启动前脚本和启动后脚本（该功能可以在环境启动前后执行一些必要的准备动作，例如：退出docker以前先关闭某个容器）
 
 
 ## 怎么使用
-在下面的界面中使用输入需要控制的环境目录，点击扫描，应用会自动找到其中bat、exe、.serveice文件对应的启动项、windwos service、计划任务等。而后点击新建策略即可保存这些需要控制的环境
+第一步需要找到与开发相关的环境中的可执行程序，在下面的界面中输入需要控制的环境目录，点击扫描，应用会自动找到其中bat、exe、.serveice文件对应的启动项、windwos service、计划任务等。最后通过筛选，得出需要的环境项目，选取后保存即可
 
 ![image](https://github.com/Mr-miao/env-master/assets/20635826/fbed3ef4-d753-46b2-a138-d4f648f7a725)
 ![image](https://github.com/Mr-miao/env-master/assets/20635826/8e55c26e-2315-47b5-862f-15088c387a15)
